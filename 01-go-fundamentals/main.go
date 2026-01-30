@@ -3,13 +3,10 @@ package main
 import (
 	"fmt"
 
-	twosum "github.com/povarna/generative-ai-with-go/fundamentals/leetcode/001_two_sum"
+	validanagram "github.com/povarna/generative-ai-with-go/fundamentals/leetcode/0242_valid_anagram"
 )
 
 func main() {
-	nums := []int{2, 7, 11, 15}
-	target := 9
-
-	newVar := twosum.TwoSum(nums, target)
-	fmt.Printf("%v\n", newVar)
+	t := validanagram.IsAnagramWithDict("rat", "cat")
+	fmt.Printf("%v\n", t)
 }

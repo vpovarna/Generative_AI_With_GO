@@ -14,9 +14,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 **Go Focus**: Slices vs arrays, maps, range loops, rune handling
 
 1. **Two Sum** - [LeetCode #1](https://leetcode.com/problems/two-sum/)
-   - Difficulty: Easy
-   - Concepts: Maps, slices, hash table pattern
-
 2. **Valid Anagram** - [LeetCode #242](https://leetcode.com/problems/valid-anagram/)
    - Difficulty: Easy
    - Concepts: Runes (Unicode), maps, string manipulation
