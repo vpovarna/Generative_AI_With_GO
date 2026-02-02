@@ -92,9 +92,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 ---
 
 ## Advent of Code Problems (20)
-
-Select problems from various years that teach specific Go concepts. Each problem has two parts.
-
 ### Day 1-2: String Parsing, File I/O (4 problems)
 
 21. **AoC 2020 Day 1** - https://adventofcode.com/2020/day/1
@@ -102,25 +99,14 @@ Select problems from various years that teach specific Go concepts. Each problem
 23. **AoC 2021 Day 1** - https://adventofcode.com/2021/day/1
 24. **AoC 2023 Day 1** - https://adventofcode.com/2023/day/1
 
-
 ### Day 3: Maps, Counting, Frequency (2 problems)
-
 **Go Focus**: Map patterns, counting algorithms
 
 25. **AoC 2021 Day 3** - [Binary Diagnostic](https://adventofcode.com/2021/day/3)
-    - Bit counting and manipulation
-    - Most/least common bits
-    - Concepts: Maps, bit operations
-
 26. **AoC 2022 Day 6** - [Tuning Trouble](https://adventofcode.com/2022/day/6)
-    - Find unique character sequences
-    - Sliding window
-    - Concepts: Maps as sets, sliding window
 
 ### Day 4: Grid Problems, 2D Slices (3 problems)
-
 **Go Focus**: 2D slices, coordinate systems
-
 27. **AoC 2021 Day 4** - [Giant Squid](https://adventofcode.com/2021/day/4)
     - Bingo card simulation
     - 2D grid operations
