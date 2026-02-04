@@ -107,10 +107,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 ### Day 4: Grid Problems, 2D Slices (3 problems)
 **Go Focus**: 2D slices, coordinate systems
 27. **AoC 2021 Day 4** - [Giant Squid](https://adventofcode.com/2021/day/4)
-    - Bingo card simulation
-    - 2D grid operations
-    - Concepts: 2D slices, game state
-
 28. **AoC 2022 Day 8** - [Treetop Tree House](https://adventofcode.com/2022/day/8)
     - Grid visibility checking
     - Multiple directions
