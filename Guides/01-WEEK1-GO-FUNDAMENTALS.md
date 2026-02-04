@@ -113,9 +113,6 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
     - Concepts: 2D iteration, directions
 
 29. **AoC 2023 Day 3** - [Gear Ratios](https://adventofcode.com/2023/day/3)
-    - Parse 2D grid with symbols
-    - Adjacent number checking
-    - Concepts: Coordinate maps, neighbors
 
 ### Day 5: Structs, Custom Types (3 problems)
 
