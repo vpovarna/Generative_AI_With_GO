@@ -119,10 +119,8 @@ Master Go syntax, idioms, and standard library through 40 carefully selected pro
 32. **AoC 2020 Day 4** - [Passport Processing](https://adventofcode.com/2020/day/4)
 
 ## Day 6: System Design problems (4 problems)
-**AoC 2023 Day 20** - [Pulse Propagation)](https://adventofcode.com/2023/day/20)
 **AoC 2022 Day 11** - [Monkey in the Middle](https://adventofcode.com/2022/day/11)
-**AoC 2023 Day 19** - [Aplenty](https://adventofcode.com/2023/day/19)
-**AoC 2018 Day 7** - [The Sum of Its Parts](https://adventofcode.com/2018/day/7)
+**AoC 2022 Day 7** - [File System](https://adventofcode.com/2022/day/7)
 
 ### Day 7: Algorithms, Recursion (3 problems)
 
