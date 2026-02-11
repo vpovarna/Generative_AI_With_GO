@@ -1,7 +1,6 @@
 ### Problem
 Problem Description
 You are given a series of commands that represent operations on a file system. Your task is to:
-- Calculate the total size of each directory (sum of all files in it and its subdirectories)
 - Find all directories and calculate the sum for each one of them. 
 
 Input Format  

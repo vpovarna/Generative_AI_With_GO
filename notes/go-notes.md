@@ -34,3 +34,14 @@ TL;DR:
 & = "Get pointer TO this"
 * in type = "This IS a pointer"
 * in expression = "Get value FROM this pointer"
+
+
+## Go Postgres Migrations
+
+## Create migrations:
+
+migrate create -ext sql -dir migrations -seq create_collections
+
+## Run migrations
+
+migrate -path ./migrations -database "postgres://your_user:your_password@localhost:5432/your_db?sslmode=disable" up
