@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -11,8 +13,29 @@ import (
 )
 
 func main() {
+	prompt := flag.String("prompt", "", "The prompt to send to Claude")
+	stream := flag.Bool("stream", false, "Enable streaming response")
+	maxTokens := flag.Int("max-tokens", 2000, "The maximum number of tokens to generate")
+	stdin := flag.Bool("stdin", false, "Read prompt from stdin")
+
+	flag.Parse()
+
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
+	}
+
+	var finalPrompt string
+
+	if *stdin {
+		bytes, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			log.Fatal("Failed to read from stdin:", err)
+		}
+		finalPrompt = string(bytes)
+	} else if *prompt != "" {
+		finalPrompt = *prompt
+	} else {
+		log.Fatal("Please provide a prompt using -prompt or -stdin")
 	}
 
 	ctx := context.Background()
@@ -26,19 +49,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Invoke client
-	response, err := bedrockClient.InvokeModel(ctx, bedrock.ClaudeRequest{
-		Prompt:      "What is Go Programming Language",
-		MaxTokens:   200,
-		Temperature: 0.1,
-	})
-
-	if err != nil {
-		log.Fatalf("Unable to invoke Claude model: %v", err)
+	req := bedrock.ClaudeRequest{
+		Prompt:      finalPrompt,
+		MaxTokens:   *maxTokens,
+		Temperature: 0.0,
 	}
 
-	fmt.Printf("Claude response is: %s\n", response.Content)
-
-	log.Println("Finish!!")
-
+	// Invoke client
+	if *stream {
+		fmt.Println("Streaming response:")
+		response, err := bedrockClient.InvokeModelStream(ctx, req, func(chunk string) error {
+			fmt.Print(chunk)
+			return nil
+		})
+		if err != nil {
+			log.Fatalf("Unable to invoke Claude model: %v", err)
+		}
+		fmt.Printf("\n\nStop reason: %s\n", response.StopReason)
+	} else {
+		response, err := bedrockClient.InvokeModel(ctx, req)
+		if err != nil {
+			log.Fatalf("Unable to invoke Claude model: %v", err)
+		}
+		fmt.Printf("Claude Response: \n%s\n", response.Content)
+	}
 }
