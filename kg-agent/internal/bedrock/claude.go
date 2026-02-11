@@ -1,10 +1,10 @@
 package bedrock
 
 import (
-	"strings"
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
@@ -63,7 +63,7 @@ func (c *Client) InvokeModel(ctx context.Context, request ClaudeRequest) (*Claud
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to marshal request: %w", request)
+		return nil, fmt.Errorf("Failed to marshal request: %w", err)
 	}
 
 	// Call Bedrock
@@ -159,7 +159,7 @@ func (c *Client) InvokeModelStream(ctx context.Context, req ClaudeRequest, callb
 
 			// Extract text from delta (streaming text chunks)
 			if chunkResponse.Delta.Text != "" {
-				fullContent .WriteString(chunkResponse.Delta.Text)
+				fullContent.WriteString(chunkResponse.Delta.Text)
 				if callback != nil {
 					if err := callback(chunkResponse.Delta.Text); err != nil {
 						return nil, fmt.Errorf("callback error: %w", err)
@@ -169,7 +169,7 @@ func (c *Client) InvokeModelStream(ctx context.Context, req ClaudeRequest, callb
 
 			// Extract text from content_block (initial content)
 			if chunkResponse.ContentBlock.Text != "" {
-				fullContent .WriteString(chunkResponse.ContentBlock.Text)
+				fullContent.WriteString(chunkResponse.ContentBlock.Text)
 				if callback != nil {
 					if err := callback(chunkResponse.ContentBlock.Text); err != nil {
 						return nil, fmt.Errorf("callback error: %w", err)
