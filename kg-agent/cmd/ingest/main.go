@@ -2,19 +2,18 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
 	err := godotenv.Load()
 
 	if err != nil {
-		log.Fatal("Unable to load env variables")
+		log.Warn().Msg("Unable to load env variables")
 	}
 
 	ctx := context.Background()
@@ -28,17 +27,19 @@ func main() {
 		SSLMode:  os.Getenv("KG_AGENT_VECTOR_DB_SSLMode"),
 	}
 
-	db, err := database.New(ctx, config)
+	db, err := database.NewWithBackoff(ctx, config, 3)
 	if err != nil {
-		log.Fatal("Failed to connect to database. Error: %w", err)
+		log.Fatal().Err(err).Msg("Failed to connect to database")
+		return
 	}
 
 	defer db.Close()
 
 	if err := db.Ping(ctx); err != nil {
-		log.Fatalf("Database failed: %s", err)
+		log.Fatal().Err(err).Msg("Database ping failed")
+		return
 	}
 
-	fmt.Println("Connected successfully")
+	log.Info().Msg("Connected successfully")
 
 }
