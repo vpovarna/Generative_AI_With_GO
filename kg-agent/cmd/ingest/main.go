@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -61,40 +60,43 @@ func main() {
 
 	embedder := embedding.NewBedrockEmbedder(bedrockClient.Client)
 
-	embedding, err := embedder.GenerateEmbeddings(ctx, "Hello world")
-	if err != nil {
-		log.Error().Err(err).Msg("Unable to generate embeddings")
-		return
-	}
-
-	log.Info().
-		Int("dimensions", len(embedding)).
-		Float32("embeddings", embedding[0]).
-		Msg("Embedding generated")
-
-	// Test batch
-	texts := []string{"Hello", "World", "Go programming"}
-	embeddings, err := embedder.GenerateBatchEmbeddings(ctx, texts)
-	if err != nil {
-		log.Error().Err(err).Msg("Unable to generate embeddings")
-		return
-	}
-
-	log.Info().
-		Int("count", len(embeddings)).
-		Msg("Batch embeddings generated")
-
+	// Create document parser
 	parser := ingestion.NewParser()
 	doc, err := parser.ParseFile(*filePath)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Unable to parse input file.")
 	}
 
+	// Insert Document
+	err = db.InsertDocument(ctx, *doc)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Unable to insert document.")
+	}
+	log.Info().Msg("Document inserted successfully")
+
+	// Create chunks
 	chunker := ingestion.NewChunker(50, 10)
 	chunks := chunker.ChunkText(doc.Content)
+	log.Info().Msg("Chunks created successfully")
 
+	// Generate Embeddings
+	var chunkContents []string
 	for _, chunk := range chunks {
-		fmt.Println(chunk)
+		chunkContents = append(chunkContents, chunk.Content)
 	}
+
+	embeddings, err := embedder.GenerateBatchEmbeddings(ctx, chunkContents)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Unable to generate embeddings.")
+	}
+
+	log.Info().Msg("Embeddings generated successfully")
+
+	err = db.InsertChunks(ctx, doc.ID, chunks, embeddings)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to insert chunks")
+	}
+
+	log.Info().Int("chunks_inserted", len(chunks)).Msg("Ingestion complete!")
 
 }
