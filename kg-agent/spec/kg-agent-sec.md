@@ -24,19 +24,37 @@ Phase 3: Query Write logic
   - Add query rewriting for better retrieval
 
 Phase 4: Knowledge Base & Vector Search  
-  - Connect to vector database (e.g., PostgreSQL with pgvector, or Amazon OpenSearch)
-  - Implement document ingestion pipeline
-  - Build similarity search tool
-  - Implement hybrid search (keyword + semantic)
-  - Deliverable: Agent can retrieve relevant documentation chunks before answering
+Contains three sub-phases
 
-Phase 5: Agent Tools & Reasoning Loop  
-  - Implement tool-calling framework
-  - Create tools: document_search, get_related_docs, etc.
-  - Add ReAct or similar reasoning pattern
-  - Deliverable: Agent can decide when to search and use retrieved context
+  Phase 4A: Database + Ingestion
+  - Setup Postgres + pgvector (docker-compose)
+  - Create schema (documents, chunks, embeddings)
+  - Build embedding service (Bedrock Titan)
+  - Build chunker
+  - Build ingestion CLI
+  - Load sample documents
 
-Phase 6: Advanced Features  
+  Phase 4B: Search Service
+  - Create cmd/search-api/ - separate service
+  - Implement semantic search endpoint
+  - Implement keyword search endpoint
+  - Implement hybrid search endpoint
+  - Add ranking (RRF)
+
+  Phase 4C: Integration
+  - Call search service from agent
+  - Format results as context
+  - Pass context to Claude
+  - Add simple caching (in-memory map)
+  - Test end-to-end
+
+Phase 5: Advanced
+ - Tool calling (let Claude decide when to search)
+ - Redis caching
+ - Multi-hop reasoning
+ - Conversation memory
+
+Phase 6: Extra Features  
   - Implement guardrails (input/output validation, safety checks)
   - Add conversation memory/history
   - Deliverable: Production-ready documentation agent
