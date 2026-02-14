@@ -18,6 +18,8 @@ func main() {
 	chunkSize := flag.Int("chunkSize", 500, "Chunk size")
 	chunkOverlap := flag.Int("chunkOverlap", 100, "Chunk overlap")
 
+	flag.Parse()
+
 	err := godotenv.Load()
 
 	if err != nil {
