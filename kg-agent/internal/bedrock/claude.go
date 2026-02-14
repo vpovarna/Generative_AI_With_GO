@@ -67,8 +67,8 @@ func (c *Client) InvokeModel(ctx context.Context, request ClaudeRequest) (*Claud
 	}
 
 	// Call Bedrock
-	output, err := c.client.InvokeModel(ctx, &bedrockruntime.InvokeModelInput{
-		ModelId:     &c.modelID,
+	output, err := c.Client.InvokeModel(ctx, &bedrockruntime.InvokeModelInput{
+		ModelId:     &c.ModelID,
 		Body:        body,
 		ContentType: aws.String("application/json"),
 		Accept:      aws.String("application/json"),
@@ -116,8 +116,8 @@ func (c *Client) InvokeModelStream(ctx context.Context, req ClaudeRequest, callb
 		return nil, fmt.Errorf("Failed to marshal request: %w", err)
 	}
 
-	output, err := c.client.InvokeModelWithResponseStream(ctx, &bedrockruntime.InvokeModelWithResponseStreamInput{
-		ModelId:     &c.modelID,
+	output, err := c.Client.InvokeModelWithResponseStream(ctx, &bedrockruntime.InvokeModelWithResponseStreamInput{
+		ModelId:     &c.ModelID,
 		Body:        body,
 		Accept:      aws.String("application/json"),
 		ContentType: aws.String("application/json"),

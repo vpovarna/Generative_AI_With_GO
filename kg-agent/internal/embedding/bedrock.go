@@ -3,6 +3,7 @@ package embedding
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
@@ -68,6 +69,15 @@ func (e *BedrockEmbedder) GenerateEmbeddings(ctx context.Context, query string) 
 }
 
 func (e *BedrockEmbedder) GenerateBatchEmbeddings(ctx context.Context, queries []string) ([][]float32, error) {
-	// TODO: Implement batch embeddings
-	return nil, nil
+	embeddings := make([][]float32, len(queries))
+	for i, query := range queries {
+		embedding, err := e.GenerateEmbeddings(ctx, query)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate embedding for query %s: %w", query, err)
+		}
+
+		embeddings[i] = embedding
+
+	}
+	return embeddings, nil
 }

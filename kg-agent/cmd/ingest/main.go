@@ -5,7 +5,9 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/database"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/embedding"
 	"github.com/rs/zerolog/log"
 )
 
@@ -42,4 +44,38 @@ func main() {
 
 	log.Info().Msg("Connected successfully")
 
+	region := os.Getenv("AWS_REGION")
+	modelID := os.Getenv("CLAUDE_MODEL_ID")
+
+	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
+
+	if err != nil {
+		log.Error().Err(err).Msg("Unable to create bedrock client")
+		return
+	}
+
+	embedder := embedding.NewBedrockEmbedder(bedrockClient.Client)
+
+	embedding, err := embedder.GenerateEmbeddings(ctx, "Hello world")
+	if err != nil {
+		log.Error().Err(err).Msg("Unable to generate embeddings")
+		return
+	}
+
+	log.Info().
+		Int("dimensions", len(embedding)).
+		Float32("embeddings", embedding[0]).
+		Msg("Embedding generated")
+
+	// Test batch
+	texts := []string{"Hello", "World", "Go programming"}
+	embeddings, err := embedder.GenerateBatchEmbeddings(ctx, texts)
+	if err != nil {
+		log.Error().Err(err).Msg("Unable to generate embeddings")
+		return
+	}
+
+	log.Info().
+		Int("count", len(embeddings)).
+		Msg("Batch embeddings generated")
 }

@@ -9,8 +9,8 @@ import (
 )
 
 type Client struct {
-	client  *bedrockruntime.Client
-	modelID string
+	Client  *bedrockruntime.Client
+	ModelID string
 }
 
 func NewClient(ctx context.Context, region string, modelID string) (*Client, error) {
@@ -26,7 +26,7 @@ func NewClient(ctx context.Context, region string, modelID string) (*Client, err
 
 	// Return Bedrock Client
 	return &Client{
-		client:  bedrockClient,
-		modelID: modelID,
+		Client:  bedrockClient,
+		ModelID: modelID,
 	}, nil
 }
