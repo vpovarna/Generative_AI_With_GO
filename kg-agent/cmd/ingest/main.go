@@ -14,9 +14,16 @@ import (
 )
 
 func main() {
+	// TODO: replace this with cobra cli
+	insertDocCommand := flag.Bool("insert-doc", false, "Insert document command")
 	filePath := flag.String("filePath", "resources/test-input.txt", "Relative path to the document")
 	chunkSize := flag.Int("chunkSize", 500, "Chunk size")
 	chunkOverlap := flag.Int("chunkOverlap", 100, "Chunk overlap")
+
+	deleteDocCommand := flag.Bool("delete-doc", false, "Delete existing document command")
+	documentId := flag.String("doc-id", "", "Document id which needs to be delete")
+
+	getAllDocsCommand := flag.Bool("get-docs", false, "Get all documents command")
 
 	flag.Parse()
 
@@ -60,14 +67,34 @@ func main() {
 	parser := ingestion.NewParser()
 	chunker := ingestion.NewChunker(*chunkSize, *chunkOverlap)
 	embedder := embedding.NewBedrockEmbedder(bedrockClient.Client)
-
-	// Create pipeline
 	pipeline := ingestion.NewPipeline(parser, chunker, embedder, db.Pool)
 
-	// Ingest document (atomic operation)
-	if err := pipeline.IngestDocument(ctx, *filePath); err != nil {
-		log.Fatal().Err(err).Msg("Ingestion failed")
-	}
+	// Input commands parsing
+	if *deleteDocCommand {
+		// Delete a document by id
+		err := db.DeleteDocument(ctx, *documentId)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to delete document")
+		}
+		log.Info().Msg("Document delete successfully")
+	} else if *getAllDocsCommand {
+		// Get all documents and return ids
+		documentsResponse, err := db.GetAllDocs(ctx)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Unable to fetch documents from DB!")
+		}
 
-	log.Info().Msg("Ingestion successful!")
+		for _, documentResponse := range documentsResponse {
+			log.Info().Msg(documentResponse.Print())
+
+		}
+	} else if *insertDocCommand {
+		// Ingest document (atomic operation)
+		if err := pipeline.IngestDocument(ctx, *filePath); err != nil {
+			log.Fatal().Err(err).Msg("Ingestion failed")
+		}
+		log.Info().Msg("Ingestion successful!")
+	} else {
+		log.Fatal().Msg("Unsupported command")
+	}
 }
