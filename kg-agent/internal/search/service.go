@@ -32,7 +32,7 @@ func (s *SearchHandler) SematicSearch(ctx context.Context, query string, limit i
 		return nil, fmt.Errorf("Unable to run sematic search on the DB. Error: %w", err)
 	}
 
-	searchResults := []SearchResult{}
+	var searchResults []SearchResult
 
 	for i, chunk := range chunks {
 		searchResults = append(searchResults,
@@ -48,9 +48,28 @@ func (s *SearchHandler) SematicSearch(ctx context.Context, query string, limit i
 	return searchResults, nil
 }
 
-func (s *SearchHandler) KeywordSearch(ctx context.Context, query string, limit int) ([]SearchResult, error)
+func (s *SearchHandler) KeywordSearch(ctx context.Context, query string, limit int) ([]SearchResult, error) {
+	chunks, err := s.db.KeywordSearch(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to run keyword search on the DB. Error: %w", err)
+	}
 
-func (s *SearchHandler) HybridSearch(ctx context.Context, query string, limit int) ([]SearchResult, error)
+	var searchResults []SearchResult
+
+	for i, chunk := range chunks {
+		searchResults = append(searchResults, SearchResult{
+			ChunkID:    chunk.Id,
+			DocumentID: chunk.DocumentID,
+			Content:    chunk.Content,
+			Score:      chunk.Rank,
+			Rank:       i + 1,
+		})
+	}
+
+	return searchResults, nil
+}
+
+// func (s *SearchHandler) HybridSearch(ctx context.Context, query string, limit int) ([]SearchResult, error)
 
 func (s *SearchHandler) DistanceToScore(distance float64) float64 {
 	return 1.0 - distance
