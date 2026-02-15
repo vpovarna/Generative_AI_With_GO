@@ -1,0 +1,32 @@
+CloudVault Security Best Practices
+
+Security is our top priority. This document outlines the security features and best practices for using CloudVault.
+
+Encryption:
+All files are encrypted using AES-256 encryption before leaving your device. We use zero-knowledge encryption, meaning even CloudVault employees cannot access your files. Your encryption keys are derived from your password using PBKDF2 with 100,000 iterations.
+
+Two-Factor Authentication:
+We strongly recommend enabling two-factor authentication (2FA) for your account. CloudVault supports:
+- Time-based One-Time Passwords (TOTP) via apps like Google Authenticator
+- SMS verification codes
+- Hardware security keys (YubiKey, Titan Security Key)
+
+Password Requirements:
+- Minimum 12 characters
+- Must include uppercase and lowercase letters
+- Must include at least one number
+- Must include at least one special character
+- Cannot reuse previous 5 passwords
+
+File Sharing Security:
+When sharing files, you can:
+- Set expiration dates (1 day to 1 year)
+- Require password protection
+- Limit downloads to specific number
+- Revoke access at any time
+- View audit logs of who accessed your files
+
+Compliance:
+CloudVault is compliant with SOC 2 Type II, GDPR, HIPAA, and ISO 27001 standards. We undergo regular security audits by independent third parties.
+
+If you suspect a security breach, immediately contact security@cloudvault.com.

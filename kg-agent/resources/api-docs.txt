@@ -1,0 +1,51 @@
+CloudVault API Documentation
+
+The CloudVault API allows developers to integrate cloud storage functionality into their applications.
+
+Authentication:
+All API requests require authentication using API tokens. To generate an API token:
+1. Log in to your CloudVault dashboard
+2. Navigate to Settings > API Tokens
+3. Click "Generate New Token"
+4. Copy and securely store your token
+
+Base URL: https://api.cloudvault.com/v1
+
+Endpoints:
+
+Upload File:
+POST /files/upload
+Headers: Authorization: Bearer <your_token>
+Body: multipart/form-data with file
+Response: { "file_id": "abc123", "status": "uploaded", "size": 1024 }
+
+Download File:
+GET /files/{file_id}/download
+Headers: Authorization: Bearer <your_token>
+Response: Binary file data
+
+List Files:
+GET /files
+Headers: Authorization: Bearer <your_token>
+Query Parameters: folder_id (optional), limit (default: 50), offset (default: 0)
+Response: { "files": [...], "total": 150, "page": 1 }
+
+Delete File:
+DELETE /files/{file_id}
+Headers: Authorization: Bearer <your_token>
+Response: { "status": "deleted", "file_id": "abc123" }
+
+Rate Limits:
+- Free tier: 100 requests per hour
+- Professional tier: 1,000 requests per hour
+- Enterprise tier: 10,000 requests per hour
+
+Error Codes:
+- 400: Bad Request - Invalid parameters
+- 401: Unauthorized - Invalid or missing API token
+- 403: Forbidden - Insufficient permissions
+- 404: Not Found - File does not exist
+- 429: Too Many Requests - Rate limit exceeded
+- 500: Internal Server Error - Contact support
+
+For more information, visit our developer portal at developers.cloudvault.com.

@@ -1,0 +1,19 @@
+Getting Started with CloudVault Storage
+
+CloudVault is a secure cloud storage solution designed for businesses. It provides end-to-end encryption, automatic backups, and seamless file synchronization across all your devices.
+
+Key Features:
+- Military-grade 256-bit AES encryption
+- Automatic file versioning and backup
+- Real-time collaboration tools
+- Cross-platform support (Windows, Mac, Linux, iOS, Android)
+- Advanced sharing controls with expiration dates
+
+To get started, simply create an account at cloudvault.com and download the desktop application. The setup wizard will guide you through the initial configuration process.
+
+Pricing:
+- Basic Plan: 100GB for $9.99/month
+- Professional Plan: 1TB for $19.99/month
+- Enterprise Plan: Unlimited storage with custom pricing
+
+For technical support, contact support@cloudvault.com or visit our help center at help.cloudvault.com.

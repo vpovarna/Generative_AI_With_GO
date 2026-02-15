@@ -62,8 +62,8 @@ func (db *DB) SemanticSearch(ctx context.Context, queryEmbeddings []float32, lim
 	  id, 
 	  document_id,
 	  content, 
-	  embeddings <-> $1 AS distance 
-	FROM document_chunk 
+	  embedding <-> $1 AS distance 
+	FROM document_chunks 
 	ORDER BY distance ASC 
 	LIMIT $2`
 
