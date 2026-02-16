@@ -15,6 +15,8 @@ Knowledge Graph Agent with Claude for document search and question answering.
 | REST API | HTTP endpoints for agent and search |
 | RAG Integration | Context-aware responses with search |
 | Streaming Responses | Server-Sent Events for real-time output |
+| Conversation Memory | Redis-backed multi-turn conversations |
+| Session Management | Automatic session creation and tracking |
 
 ## Architecture
 
@@ -25,11 +27,13 @@ kg-agent/
 │   ├── search/      # Search API service (semantic, keyword, hybrid)
 │   └── ingest/      # Document ingestion CLI
 ├── internal/
-│   ├── agent/       # Agent HTTP handlers
+│   ├── agent/       # Agent HTTP handlers and service
 │   ├── search/      # Search HTTP handlers and service
+│   ├── conversation/# Conversation memory (Redis)
 │   ├── bedrock/     # AWS Bedrock client
 │   ├── embedding/   # Titan embedding service
 │   ├── database/    # PostgreSQL operations
+│   ├── redis/       # Redis connection
 │   └── ingestion/   # Document processing pipeline
 └── migrations/      # Database schema
 ```
@@ -40,6 +44,7 @@ kg-agent/
 - Docker and Docker Compose
 - AWS credentials configured
 - PostgreSQL with pgvector extension
+- Redis 7+
 
 ## Environment Setup
 
@@ -58,18 +63,25 @@ KG_AGENT_VECTOR_DB_PASSWORD=postgres
 KG_AGENT_VECTOR_DB_DATABASE=kg_agent
 KG_AGENT_VECTOR_DB_SSLMode=disable
 
+# Redis Configuration
+REDIS_ADDR=localhost:6379
+REDIS_PASSWORD=
+REDIS_TTL=30m              # Conversation TTL
+
 # API Ports
-AGENT_API_PORT=8081      # Agent API
-SEARCH_API_PORT=8082     # Search API
+AGENT_API_PORT=8081         # Agent API
+SEARCH_API_PORT=8082        # Search API
 
 # Search Client Configuration
 SEARCH_API_URL=http://localhost:8082
-SEARCH_API_TIMEOUT=15    # seconds
+SEARCH_API_TIMEOUT=15       # seconds
+SEARCH_API_MAX_IDLE_CONNS=100
+SEARCH_API_MAX_IDLE_CONNS_PER_HOST=10
 ```
 
 ## Local Development
 
-### Start PostgreSQL
+### Start PostgreSQL and Redis
 
 ```bash
 docker-compose up -d
@@ -108,8 +120,8 @@ go run cmd/agent/main.go
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/v1/health` | GET | Health check |
-| `/api/v1/query` | POST | Query Claude (non-streaming) |
-| `/api/v1/query/stream` | POST | Query Claude (streaming SSE) |
+| `/api/v1/query` | POST | Query Claude (non-streaming, with conversation memory) |
+| `/api/v1/query/stream` | POST | Query Claude (streaming SSE, with conversation memory) |
 
 ### Search API (Port 8082)
 
@@ -124,22 +136,36 @@ go run cmd/agent/main.go
 ### Agent API (with RAG)
 
 ```bash
-# Non-streaming query with context
+# First query - creates new session
 curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{"prompt": "How do I encrypt my files?", "max_tokens": 500}' | jq .
 
 # Example response:
 # {
+#   "session_id": "550e8400-e29b-41d4-a716-446655440000",
 #   "content": "Based on the documentation, you can encrypt files using...",
 #   "stop_reason": "end_turn",
 #   "model": "anthropic.claude-3-5-sonnet-20241022-v2:0"
 # }
 
-# Streaming query with context
-curl -X POST http://localhost:8081/api/v1/query/stream \
+# Follow-up query - uses existing session (copy session_id from above)
+curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Explain two-factor authentication", "max_tokens": 500}'
+  -d '{
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "prompt": "What about performance impact?",
+    "max_tokens": 500
+  }' | jq .
+
+# Streaming query with conversation memory
+curl -N -X POST http://localhost:8081/api/v1/query/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "prompt": "Can you summarize what we discussed?",
+    "max_tokens": 500
+  }'
 
 # Health check
 curl http://localhost:8081/api/v1/health | jq .

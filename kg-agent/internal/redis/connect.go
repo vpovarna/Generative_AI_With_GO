@@ -34,7 +34,7 @@ func ConnectRedis(ctx context.Context, addr string, password string, maxRetries 
 
 		err = client.Ping(ctx).Err()
 		if err == nil {
-			log.Info().Int("attempts_needed", i+1).Msg("✅ Redis connected")
+			log.Info().Int("attempts_needed", i+1).Msg("Redis connected")
 			return client, nil
 		}
 
