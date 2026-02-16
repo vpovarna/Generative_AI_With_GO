@@ -13,6 +13,17 @@ services:
     volumes:
       - ./migrations:/docker-entrypoint-initdb.d  # ← Mount entire directory
       - postgres_data:/var/lib/postgresql/data     # ← Persist data
+  redis:
+    container_name: kg-agent-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:  # Define named volume

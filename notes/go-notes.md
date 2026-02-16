@@ -45,3 +45,10 @@ migrate create -ext sql -dir migrations -seq create_collections
 ## Run migrations
 
 migrate -path ./migrations -database "postgres://your_user:your_password@localhost:5432/your_db?sslmode=disable" up
+
+## Rule of Thumb: When to Return Pointers
+Return Pointer When:
+ - Creating new instances (factories, constructors)
+ - Methods on pointer receivers
+ - Large structs (> 100 bytes)
+ - Need to return nil (optional value)
