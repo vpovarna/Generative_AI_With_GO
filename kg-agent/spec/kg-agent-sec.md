@@ -47,16 +47,32 @@ Contains three sub-phases
   - Pass context to Claude
   - Test end-to-end
 
-Phase 5: Advanced
- - Tool calling (let Claude decide when to search)
- - Redis caching
- - Multi-hop reasoning
- - Conversation memory
+Phase 5: Conversation & Tool Intelligence
+Contains two sub-phases
 
-Phase 6: Extra Features  
+  Phase 5A: Conversation Intelligence (Layer 1)
+  - Session management (store conversation sessions)
+  - Conversation memory/history storage
+  - Follow-up resolver (resolve references from chat history)
+  - Context truncation (keep last N messages)
+  - Multi-turn dialog support
+  - Deliverable: Agent that can handle natural conversations with context
+
+  Phase 5B: Tool Calling & Caching (Layer 2)
+  - Implement tool calling (Claude decides when to search)
+  - Define search_documentation tool schema
+  - Retrieval strategy agent (search vs. direct answer)
+  - Redis caching (persistent cache for search results)
+  - Cache invalidation strategy
+  - Deliverable: Smart agent that only searches when needed, with persistent cache
+
+Phase 6: Answer Quality & Production Features
+  - Grounding validator (anti-hallucination checks)
+  - Confidence scoring
   - Implement guardrails (input/output validation, safety checks)
-  - Add conversation memory/history or simple caching (in-memory map)
-  - Add euclidian distances support
-  - Implement paginate
-  - Add cobra cli
+  - Multi-hop reasoning (chain multiple searches)
+  - Cross-encoder reranker (advanced relevance scoring)
+  - Add euclidian distance support
+  - Implement pagination
+  - Add cobra CLI
   - Deliverable: Production-ready documentation agent
