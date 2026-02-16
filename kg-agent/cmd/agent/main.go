@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
@@ -53,6 +54,24 @@ func main() {
 		port = "8081"
 	}
 
+	searchApiBaseUrl := os.Getenv("SEARCH_API_URL")
+
+	if searchApiBaseUrl == "" {
+		searchApiBaseUrl = "http://localhost:8082"
+	}
+	searchApiTimeout := os.Getenv("SEARCH_API_TIMEOUT")
+	timeout, err := strconv.Atoi(searchApiTimeout)
+	if err != nil || searchApiTimeout == "" {
+		timeout = 10
+	}
+
+	searchConfig := agent.SearchClientConfig{
+		BaseURL:             searchApiBaseUrl,
+		Timeout:             time.Duration(timeout) * time.Second,
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+	}
+
 	ctx := context.Background()
 	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
 	if err != nil {
@@ -65,7 +84,8 @@ func main() {
 		Msg("Bedrock client initialized")
 
 	rewriter := rewrite.NewRewriter(bedrockClient)
-	service := agent.NewService(bedrockClient, rewriter, modelID)
+	searchClient := agent.NewSearchClient(searchConfig)
+	service := agent.NewService(bedrockClient, modelID, rewriter, searchClient)
 	handler := agent.NewHandler(service)
 
 	container := restful.NewContainer()

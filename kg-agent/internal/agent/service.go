@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
@@ -15,13 +16,15 @@ type Service struct {
 	bedrockClient *bedrock.Client
 	rewriter      *rewrite.Rewriter
 	modelID       string
+	searchClient  *SearchClient
 }
 
-func NewService(bedrockClient *bedrock.Client, rewriter *rewrite.Rewriter, modelID string) *Service {
+func NewService(bedrockClient *bedrock.Client, modelID string, rewriter *rewrite.Rewriter, searchClient *SearchClient) *Service {
 	return &Service{
 		bedrockClient: bedrockClient,
 		rewriter:      rewriter,
 		modelID:       modelID,
+		searchClient:  searchClient,
 	}
 }
 
@@ -34,8 +37,19 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 		rewrittenQuery = queryRequest.Prompt
 	}
 
+	// Search for relevant context
+	searchResults, err := s.searchClient.HybridSearch(ctx, rewrittenQuery, 5)
+	if err != nil {
+		log.Warn().Err(err).Msg("Search failed, continuing without context")
+		searchResults = nil // Continue without context
+	}
+
+	// Format context and build enhanced prompt
+	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults)
+
+	// 4. Call Claude with context
 	response, err := s.bedrockClient.InvokeModel(ctx, bedrock.ClaudeRequest{
-		Prompt:      rewrittenQuery,
+		Prompt:      enhancedPrompt,
 		MaxTokens:   queryRequest.MaxToken,
 		Temperature: queryRequest.Temperature,
 	})
@@ -125,4 +139,32 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	}
 
 	return nil
+}
+
+func (s *Service) buildPromptWithContext(userQuery string, searchResult []SearchResult) string {
+	if len(searchResult) == 0 {
+		// if no content retrieved from search API, return original query
+		return userQuery
+	}
+
+	var builder strings.Builder
+
+	for i, result := range searchResult {
+		builder.WriteString(fmt.Sprintf("[%d] (relevance: %.2f)\n", i+1, result.Score))
+		builder.WriteString(result.Content)
+		builder.WriteString("\n\n")
+	}
+
+	context := builder.String()
+
+	return fmt.Sprintf(`You are a helpful documentation assistant.
+Use the following documentation excerpts to answer the user's question:
+	
+<context>
+%s
+</context>
+	
+User question: %s
+	
+Provide a clear, accurate answer based on the documentation provided. If the documentation doesn't contain the answer, say so.`, context, userQuery)
 }
