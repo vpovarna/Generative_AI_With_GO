@@ -32,6 +32,29 @@ func NewService(bedrockClient *bedrock.Client, modelID string, rewriter *rewrite
 }
 
 func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryResponse, error) {
+	// Get or create session
+	var sessionID string
+	var conversationHistory *conversation.Conversation
+	var err error
+
+	if queryRequest.SessionID == "" {
+		// Create new Session
+		session, err := s.conversationStore.CreateSession(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create session")
+		} else {
+			sessionID = session.ID
+		}
+	} else {
+		// Retrieve conversation
+		sessionID = queryRequest.SessionID
+		conversationHistory, err = s.conversationStore.GetConversation(ctx, sessionID)
+		if err != nil {
+			log.Warn().Err(err).Str("sessionID", sessionID).Msg("failed to retrieve conversation, continuing without history")
+			conversationHistory = nil
+		}
+	}
+
 	// Query rewrite
 	rewrittenQuery, err := s.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
 	if err != nil {
@@ -48,7 +71,7 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	}
 
 	// Format context and build enhanced prompt
-	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults)
+	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, conversationHistory)
 
 	// 4. Call Claude with context
 	response, err := s.bedrockClient.InvokeModel(ctx, bedrock.ClaudeRequest{
@@ -62,6 +85,7 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	}
 
 	queryResponse := QueryResponse{
+		SessionID:  sessionID,
 		Content:    response.Content,
 		StopReason: response.StopReason,
 		Model:      s.modelID,
@@ -87,7 +111,7 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	}
 
 	// Format context and build enhanced prompt
-	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults)
+	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, nil)
 
 	// Send starting event
 	startEvent := SSEEvent{
@@ -155,30 +179,32 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	return nil
 }
 
-func (s *Service) buildPromptWithContext(userQuery string, searchResult []SearchResult) string {
-	if len(searchResult) == 0 {
-		// if no content retrieved from search API, return original query
-		return userQuery
+func (s *Service) buildPromptWithContext(userQuery string, searchResult []SearchResult, conversationHistory *conversation.Conversation) string {
+	historySection := ""
+	if conversationHistory != nil && len(conversationHistory.Messages) > 0 {
+		var hb strings.Builder
+		hb.WriteString("Conversation history:\n")
+		for _, msg := range conversationHistory.Messages {
+			hb.WriteString(fmt.Sprintf("%s: %s\n", msg.Role, msg.Content))
+		}
+		historySection = hb.String() + "\n"
 	}
 
-	var builder strings.Builder
-
-	for i, result := range searchResult {
-		builder.WriteString(fmt.Sprintf("[%d] (relevance: %.2f)\n", i+1, result.Score))
-		builder.WriteString(result.Content)
-		builder.WriteString("\n\n")
+	docsSection := ""
+	if len(searchResult) > 0 {
+		var db strings.Builder
+		db.WriteString("Relevant documentation:\n<context>\n")
+		for i, r := range searchResult {
+			db.WriteString(fmt.Sprintf("[%d] (relevance: %.2f)\n%s\n\n", i+1, r.Score, r.Content))
+		}
+		db.WriteString("</context>\n")
+		docsSection = db.String() + "\n"
 	}
-
-	context := builder.String()
 
 	return fmt.Sprintf(`You are a helpful documentation assistant.
-Use the following documentation excerpts to answer the user's question:
 	
-<context>
-%s
-</context>
+	%s%sCurrent question: %s
 	
-User question: %s
-	
-Provide a clear, accurate answer based on the documentation provided. If the documentation doesn't contain the answer, say so.`, context, userQuery)
+	Provide a clear, accurate answer based on the information provided.`,
+		historySection, docsSection, userQuery)
 }
