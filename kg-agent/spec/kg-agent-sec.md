@@ -45,7 +45,6 @@ Contains three sub-phases
   - Call search service from agent
   - Format results as context
   - Pass context to Claude
-  - Add simple caching (in-memory map)
   - Test end-to-end
 
 Phase 5: Advanced
@@ -56,5 +55,8 @@ Phase 5: Advanced
 
 Phase 6: Extra Features  
   - Implement guardrails (input/output validation, safety checks)
-  - Add conversation memory/history
+  - Add conversation memory/history or simple caching (in-memory map)
+  - Add euclidian distances support
+  - Implement paginate
+  - Add cobra cli
   - Deliverable: Production-ready documentation agent
