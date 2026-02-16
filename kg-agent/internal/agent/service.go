@@ -8,23 +8,26 @@ import (
 	"strings"
 
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/conversation"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
 	"github.com/rs/zerolog/log"
 )
 
 type Service struct {
-	bedrockClient *bedrock.Client
-	rewriter      *rewrite.Rewriter
-	modelID       string
-	searchClient  *SearchClient
+	bedrockClient     *bedrock.Client
+	rewriter          *rewrite.Rewriter
+	modelID           string
+	searchClient      *SearchClient
+	conversationStore conversation.ConversationStore
 }
 
-func NewService(bedrockClient *bedrock.Client, modelID string, rewriter *rewrite.Rewriter, searchClient *SearchClient) *Service {
+func NewService(bedrockClient *bedrock.Client, modelID string, rewriter *rewrite.Rewriter, searchClient *SearchClient, conversationStore conversation.ConversationStore) *Service {
 	return &Service{
-		bedrockClient: bedrockClient,
-		rewriter:      rewriter,
-		modelID:       modelID,
-		searchClient:  searchClient,
+		bedrockClient:     bedrockClient,
+		rewriter:          rewriter,
+		modelID:           modelID,
+		searchClient:      searchClient,
+		conversationStore: conversationStore,
 	}
 }
 

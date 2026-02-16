@@ -14,7 +14,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/agent"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/conversation"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/redis"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
@@ -83,9 +85,45 @@ func main() {
 		Str("model", modelID).
 		Msg("Bedrock client initialized")
 
+	// Connect to Redis with retries
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+
+	redisClient, err := redis.ConnectRedis(
+		ctx,
+		redisAddr,
+		os.Getenv("REDIS_PASSWORD"),
+		5, // max retries
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to Redis")
+	}
+
+	configuredRedisTTL := os.Getenv("REDIS_TTL")
+	var redisTTL time.Duration
+	if configuredRedisTTL == "" {
+		redisTTL = 30 * time.Minute
+	} else {
+		ttl, err := time.ParseDuration(configuredRedisTTL)
+		if err != nil {
+			redisTTL = 30 * time.Minute
+		} else {
+			redisTTL = ttl
+		}
+	}
+
 	rewriter := rewrite.NewRewriter(bedrockClient)
 	searchClient := agent.NewSearchClient(searchConfig)
-	service := agent.NewService(bedrockClient, modelID, rewriter, searchClient)
+	conversationStore := conversation.NewRedisConversationStore(redisClient, redisTTL)
+	service := agent.NewService(
+		bedrockClient,
+		modelID,
+		rewriter,
+		searchClient,
+		conversationStore,
+	)
 	handler := agent.NewHandler(service)
 
 	container := restful.NewContainer()

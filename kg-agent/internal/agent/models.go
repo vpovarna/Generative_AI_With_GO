@@ -8,12 +8,14 @@ import (
 )
 
 type QueryRequest struct {
+	SessionID   string  `json:"session_id,omitempty" description:"Session ID for conversation continuity (optional)"`
 	Prompt      string  `json:"prompt" description:"The prompt to send to Claude"`
 	MaxToken    int     `json:"max_tokens,omitempty" description:"Maximum Tokens to generate (default: 2000)"`
 	Temperature float64 `json:"temperature,omitempty" description:"Temperature for generation (0.0-1.0, default:0.0)"`
 }
 
 type QueryResponse struct {
+	SessionID  string `json:"session_id" description:"Session ID for conversation continuity"`
 	Content    string `json:"content" description:"Claude's response text"`
 	StopReason string `json:"stop_reason" description:"Why generation stopped"`
 	Model      string `json:"model" description:"Model ID used"`
