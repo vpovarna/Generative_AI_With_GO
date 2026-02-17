@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/conversation"
@@ -84,6 +85,27 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 		return QueryResponse{}, err
 	}
 
+	// Save user message and assistant response to conversation history
+	if sessionID != "" {
+		userMsg := conversation.Message{
+			Role:      "user",
+			Content:   queryRequest.Prompt,
+			Timestamp: time.Now(),
+		}
+		if err := s.conversationStore.AddMessage(ctx, sessionID, userMsg); err != nil {
+			log.Warn().Err(err).Msg("Failed to save user message")
+		}
+
+		assistantMsg := conversation.Message{
+			Role:      "assistant",
+			Content:   response.Content,
+			Timestamp: time.Now(),
+		}
+		if err := s.conversationStore.AddMessage(ctx, sessionID, assistantMsg); err != nil {
+			log.Warn().Err(err).Msg("Failed to save assistant message")
+		}
+	}
+
 	queryResponse := QueryResponse{
 		SessionID:  sessionID,
 		Content:    response.Content,
@@ -95,6 +117,29 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 }
 
 func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, flusher http.Flusher, writer io.Writer) error {
+	// Get or create session
+	var sessionID string
+	var conversationHistory *conversation.Conversation
+	var err error
+
+	if queryRequest.SessionID == "" {
+		// Create new Session
+		session, err := s.conversationStore.CreateSession(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create session")
+		} else {
+			sessionID = session.ID
+		}
+	} else {
+		// Retrieve conversation
+		sessionID = queryRequest.SessionID
+		conversationHistory, err = s.conversationStore.GetConversation(ctx, sessionID)
+		if err != nil {
+			log.Warn().Err(err).Str("sessionID", sessionID).Msg("failed to retrieve conversation, continuing without history")
+			conversationHistory = nil
+		}
+	}
+
 	// Query rewrite
 	rewrittenQuery, err := s.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
 	if err != nil {
@@ -111,13 +156,14 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	}
 
 	// Format context and build enhanced prompt
-	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, nil)
+	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, conversationHistory)
 
 	// Send starting event
 	startEvent := SSEEvent{
 		Event: "start",
 		Data: StreamStartEvent{
-			Model: s.modelID,
+			SessionID: sessionID,
+			Model:     s.modelID,
 		},
 	}
 
@@ -176,15 +222,44 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 		flusher.Flush()
 	}
 
+	// Save user message and assistant response to conversation history
+	if sessionID != "" {
+		userMsg := conversation.Message{
+			Role:      "user",
+			Content:   queryRequest.Prompt,
+			Timestamp: time.Now(),
+		}
+		if err := s.conversationStore.AddMessage(ctx, sessionID, userMsg); err != nil {
+			log.Warn().Err(err).Msg("Failed to save user message")
+		}
+
+		assistantMsg := conversation.Message{
+			Role:      "assistant",
+			Content:   response.Content,
+			Timestamp: time.Now(),
+		}
+		if err := s.conversationStore.AddMessage(ctx, sessionID, assistantMsg); err != nil {
+			log.Warn().Err(err).Msg("Failed to save assistant message")
+		}
+	}
+
 	return nil
 }
 
 func (s *Service) buildPromptWithContext(userQuery string, searchResult []SearchResult, conversationHistory *conversation.Conversation) string {
 	historySection := ""
+
 	if conversationHistory != nil && len(conversationHistory.Messages) > 0 {
 		var hb strings.Builder
+		maxMessages := 10
+
 		hb.WriteString("Conversation history:\n")
-		for _, msg := range conversationHistory.Messages {
+		messages := conversationHistory.Messages
+		if len(messages) > maxMessages {
+			messages = messages[len(messages)-maxMessages:]
+		}
+
+		for _, msg := range messages {
 			hb.WriteString(fmt.Sprintf("%s: %s\n", msg.Role, msg.Content))
 		}
 		historySection = hb.String() + "\n"

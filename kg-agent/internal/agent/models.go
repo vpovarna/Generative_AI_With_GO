@@ -64,6 +64,7 @@ type SSEEvent struct {
 
 // SEE Event data structures
 type StreamStartEvent struct {
+	SessionID string `json:"session_id,omitempty"`
 	Model string `json:"model"`
 }
 
