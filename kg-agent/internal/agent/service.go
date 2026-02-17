@@ -34,42 +34,13 @@ func NewService(bedrockClient *bedrock.Client, modelID string, rewriter *rewrite
 
 func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryResponse, error) {
 	// Get or create session
-	var sessionID string
-	var conversationHistory *conversation.Conversation
-	var err error
-
-	if queryRequest.SessionID == "" {
-		// Create new Session
-		session, err := s.conversationStore.CreateSession(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to create session")
-		} else {
-			sessionID = session.ID
-		}
-	} else {
-		// Retrieve conversation
-		sessionID = queryRequest.SessionID
-		conversationHistory, err = s.conversationStore.GetConversation(ctx, sessionID)
-		if err != nil {
-			log.Warn().Err(err).Str("sessionID", sessionID).Msg("failed to retrieve conversation, continuing without history")
-			conversationHistory = nil
-		}
-	}
+	sessionID, conversationHistory := s.getOrCreateSession(ctx, queryRequest)
 
 	// Query rewrite
-	rewrittenQuery, err := s.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
-	if err != nil {
-		log.Error().Err(err).Msg("Query rewrite failed")
-		// Continue with original query
-		rewrittenQuery = queryRequest.Prompt
-	}
+	rewrittenQuery := s.rewriteQuery(ctx, queryRequest)
 
 	// Search for relevant context
-	searchResults, err := s.searchClient.HybridSearch(ctx, rewrittenQuery, 5)
-	if err != nil {
-		log.Warn().Err(err).Msg("Search failed, continuing without context")
-		searchResults = nil // Continue without context
-	}
+	searchResults := s.search(ctx, rewrittenQuery)
 
 	// Format context and build enhanced prompt
 	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, conversationHistory)
@@ -86,25 +57,7 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	}
 
 	// Save user message and assistant response to conversation history
-	if sessionID != "" {
-		userMsg := conversation.Message{
-			Role:      "user",
-			Content:   queryRequest.Prompt,
-			Timestamp: time.Now(),
-		}
-		if err := s.conversationStore.AddMessage(ctx, sessionID, userMsg); err != nil {
-			log.Warn().Err(err).Msg("Failed to save user message")
-		}
-
-		assistantMsg := conversation.Message{
-			Role:      "assistant",
-			Content:   response.Content,
-			Timestamp: time.Now(),
-		}
-		if err := s.conversationStore.AddMessage(ctx, sessionID, assistantMsg); err != nil {
-			log.Warn().Err(err).Msg("Failed to save assistant message")
-		}
-	}
+	s.saveConversationMessages(ctx, sessionID, queryRequest, response)
 
 	queryResponse := QueryResponse{
 		SessionID:  sessionID,
@@ -116,44 +69,24 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	return queryResponse, nil
 }
 
-func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, flusher http.Flusher, writer io.Writer) error {
-	// Get or create session
-	var sessionID string
-	var conversationHistory *conversation.Conversation
-	var err error
-
-	if queryRequest.SessionID == "" {
-		// Create new Session
-		session, err := s.conversationStore.CreateSession(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to create session")
-		} else {
-			sessionID = session.ID
-		}
-	} else {
-		// Retrieve conversation
-		sessionID = queryRequest.SessionID
-		conversationHistory, err = s.conversationStore.GetConversation(ctx, sessionID)
-		if err != nil {
-			log.Warn().Err(err).Str("sessionID", sessionID).Msg("failed to retrieve conversation, continuing without history")
-			conversationHistory = nil
-		}
-	}
-
-	// Query rewrite
-	rewrittenQuery, err := s.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
-	if err != nil {
-		log.Error().Err(err).Msg("Query rewrite failed")
-		// Continue with original query
-		rewrittenQuery = queryRequest.Prompt
-	}
-
-	// Search for relevant context
+func (s *Service) search(ctx context.Context, rewrittenQuery string) []SearchResult {
 	searchResults, err := s.searchClient.HybridSearch(ctx, rewrittenQuery, 5)
 	if err != nil {
 		log.Warn().Err(err).Msg("Search failed, continuing without context")
 		searchResults = nil // Continue without context
 	}
+	return searchResults
+}
+
+func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, flusher http.Flusher, writer io.Writer) error {
+	// Get or create session
+	sessionID, conversationHistory := s.getOrCreateSession(ctx, queryRequest)
+
+	// Query rewrite
+	rewrittenQuery := s.rewriteQuery(ctx, queryRequest)
+
+	// Search for relevant context
+	searchResults := s.search(ctx, rewrittenQuery)
 
 	// Format context and build enhanced prompt
 	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, conversationHistory)
@@ -223,27 +156,69 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	}
 
 	// Save user message and assistant response to conversation history
-	if sessionID != "" {
-		userMsg := conversation.Message{
-			Role:      "user",
-			Content:   queryRequest.Prompt,
-			Timestamp: time.Now(),
-		}
-		if err := s.conversationStore.AddMessage(ctx, sessionID, userMsg); err != nil {
-			log.Warn().Err(err).Msg("Failed to save user message")
-		}
-
-		assistantMsg := conversation.Message{
-			Role:      "assistant",
-			Content:   response.Content,
-			Timestamp: time.Now(),
-		}
-		if err := s.conversationStore.AddMessage(ctx, sessionID, assistantMsg); err != nil {
-			log.Warn().Err(err).Msg("Failed to save assistant message")
-		}
-	}
+	s.saveConversationMessages(ctx, sessionID, queryRequest, response)
 
 	return nil
+}
+
+func (s *Service) rewriteQuery(ctx context.Context, queryRequest QueryRequest) string {
+	rewrittenQuery, err := s.rewriter.RewriteQuery(ctx, queryRequest.Prompt)
+	if err != nil {
+		log.Error().Err(err).Msg("Query rewrite failed")
+		// Continue with original query
+		rewrittenQuery = queryRequest.Prompt
+	}
+	return rewrittenQuery
+}
+
+func (s *Service) saveConversationMessages(ctx context.Context, sessionID string, queryRequest QueryRequest, response *bedrock.ClaudeResponse) {
+	if sessionID == "" {
+		return // No session to save to
+	}
+
+	userMsg := conversation.Message{
+		Role:      "user",
+		Content:   queryRequest.Prompt,
+		Timestamp: time.Now(),
+	}
+	if err := s.conversationStore.AddMessage(ctx, sessionID, userMsg); err != nil {
+		log.Warn().Err(err).Msg("Failed to save user message")
+	}
+
+	assistantMsg := conversation.Message{
+		Role:      "assistant",
+		Content:   response.Content,
+		Timestamp: time.Now(),
+	}
+	if err := s.conversationStore.AddMessage(ctx, sessionID, assistantMsg); err != nil {
+		log.Warn().Err(err).Msg("Failed to save assistant message")
+	}
+
+}
+
+func (s *Service) getOrCreateSession(ctx context.Context, queryRequest QueryRequest) (string, *conversation.Conversation) {
+	var sessionID string
+	var conversationHistory *conversation.Conversation
+	var err error
+
+	if queryRequest.SessionID == "" {
+		// Create new Session
+		session, err := s.conversationStore.CreateSession(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to create session")
+		} else {
+			sessionID = session.ID
+		}
+	} else {
+		// Retrieve conversation
+		sessionID = queryRequest.SessionID
+		conversationHistory, err = s.conversationStore.GetConversation(ctx, sessionID)
+		if err != nil {
+			log.Warn().Err(err).Str("sessionID", sessionID).Msg("failed to retrieve conversation, continuing without history")
+			conversationHistory = nil
+		}
+	}
+	return sessionID, conversationHistory
 }
 
 func (s *Service) buildPromptWithContext(userQuery string, searchResult []SearchResult, conversationHistory *conversation.Conversation) string {
