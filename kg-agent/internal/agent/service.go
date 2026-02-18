@@ -64,7 +64,7 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	var searchResults []SearchResult
 
 	if decision.ShouldSearch {
-		searchResults = s.search(ctx, rewrittenQuery)
+		searchResults = s.search(ctx, queryRequest.Prompt, rewrittenQuery)
 	} else {
 		searchResults = nil
 	}
@@ -110,7 +110,7 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	// Conditionally search
 	var searchResults []SearchResult
 	if decision.ShouldSearch {
-		searchResults = s.search(ctx, rewrittenQuery)
+		searchResults = s.search(ctx, queryRequest.Prompt, rewrittenQuery)
 	} else {
 		searchResults = nil
 	}
@@ -201,8 +201,9 @@ func (s *Service) rewriteQuery(ctx context.Context, queryRequest QueryRequest) s
 	return rewrittenQuery
 }
 
-func (s *Service) search(ctx context.Context, rewrittenQuery string) []SearchResult {
-	cacheKey := s.generateCacheKey(rewrittenQuery, "hybrid", 5)
+func (s *Service) search(ctx context.Context, originalQuery string, rewrittenQuery string) []SearchResult {
+	// Use ORIGINAL query for cache key (rewrite is non-deterministic)
+	cacheKey := s.generateCacheKey(originalQuery, "hybrid", 5)
 	value, err := s.searchCache.Get(ctx, cacheKey)
 
 	if err != nil {
@@ -225,6 +226,7 @@ func (s *Service) search(ctx context.Context, rewrittenQuery string) []SearchRes
 	}
 
 	// CACHE HIT
+	log.Info().Str("original_query", originalQuery).Msg("Cache hit!")
 	var searchResult []SearchResult
 	if err := json.Unmarshal(value, &searchResult); err != nil {
 		log.Error().Err(err).Msg("Unable to deserialize response")
