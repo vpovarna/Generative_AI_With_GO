@@ -52,6 +52,7 @@ func main() {
 
 	region := os.Getenv("AWS_REGION")
 	modelID := os.Getenv("CLAUDE_MODEL_ID")
+	miniModelID := os.Getenv("CLAUDE_MINI_MODEL_ID")
 	port := os.Getenv("AGENT_API_PORT")
 	if port == "" {
 		port = "8081"
@@ -79,6 +80,10 @@ func main() {
 	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Unable to initialize Bedrock Client")
+	}
+	miniClient, err := bedrock.NewClient(ctx, region, miniModelID)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Unable to initialize Mini Bedrock Client")
 	}
 
 	log.Info().
@@ -115,12 +120,13 @@ func main() {
 		}
 	}
 
-	rewriter := rewrite.NewRewriter(bedrockClient)
+	rewriter := rewrite.NewRewriter(miniClient)
 	searchClient := agent.NewSearchClient(searchConfig)
-	retrievalStrategy := strategy.NewRetrievalStrategy(bedrockClient)
+	retrievalStrategy := strategy.NewRetrievalStrategy(miniClient)
 	conversationStore := conversation.NewRedisConversationStore(redisClient, redisTTL)
 	service := agent.NewService(
 		bedrockClient,
+		miniClient,
 		modelID,
 		rewriter,
 		searchClient,

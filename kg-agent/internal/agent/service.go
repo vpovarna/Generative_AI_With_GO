@@ -17,6 +17,7 @@ import (
 
 type Service struct {
 	bedrockClient     *bedrock.Client
+	miniClient        *bedrock.Client
 	rewriter          *rewrite.Rewriter
 	modelID           string
 	searchClient      *SearchClient
@@ -26,6 +27,7 @@ type Service struct {
 
 func NewService(
 	bedrockClient *bedrock.Client,
+	miniClient *bedrock.Client,
 	modelID string,
 	rewriter *rewrite.Rewriter,
 	searchClient *SearchClient,
@@ -33,6 +35,7 @@ func NewService(
 	retrievalStrategy *strategy.RetrievalStrategy) *Service {
 	return &Service{
 		bedrockClient:     bedrockClient,
+		miniClient:        miniClient,
 		rewriter:          rewriter,
 		modelID:           modelID,
 		searchClient:      searchClient,
@@ -60,8 +63,10 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	// Format context and build enhanced prompt
 	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, conversationHistory)
 
+	selectedClient := s.selectModelForAnswer(decision, len(searchResults) > 0)
+
 	// 4. Call Claude with context
-	response, err := s.bedrockClient.InvokeModel(ctx, bedrock.ClaudeRequest{
+	response, err := selectedClient.InvokeModel(ctx, bedrock.ClaudeRequest{
 		Prompt:      enhancedPrompt,
 		MaxTokens:   queryRequest.MaxToken,
 		Temperature: queryRequest.Temperature,
@@ -114,6 +119,9 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	// Format context and build enhanced prompt
 	enhancedPrompt := s.buildPromptWithContext(rewrittenQuery, searchResults, conversationHistory)
 
+	// Select model based on query complexity
+	selectedClient := s.selectModelForAnswer(decision, len(searchResults) > 0)
+
 	// Send starting event
 	startEvent := SSEEvent{
 		Event: "start",
@@ -129,7 +137,7 @@ func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, fl
 	}
 
 	// Call Claude with context (streaming)
-	response, err := s.bedrockClient.InvokeModelStream(ctx, bedrock.ClaudeRequest{
+	response, err := selectedClient.InvokeModelStream(ctx, bedrock.ClaudeRequest{
 		Prompt:      enhancedPrompt, // ← Changed: use enhanced prompt with context
 		MaxTokens:   queryRequest.MaxToken,
 		Temperature: queryRequest.Temperature,
@@ -280,4 +288,15 @@ func (s *Service) buildPromptWithContext(userQuery string, searchResult []Search
 	
 	Provide a clear, accurate answer based on the information provided.`,
 		historySection, docsSection, userQuery)
+}
+
+func (s *Service) selectModelForAnswer(decision strategy.Decision, hasSearchResults bool) *bedrock.Client {
+	// Simple queries without search → Use Haiku
+	if !decision.ShouldSearch && decision.Confidence > 0.90 && !hasSearchResults {
+		log.Info().Msg("Using Haiku for simple query")
+		return s.miniClient
+	}
+	// Complex queries or with search results → Use Sonnet
+	log.Info().Msg("Using Sonnet for complex query")
+	return s.bedrockClient
 }
