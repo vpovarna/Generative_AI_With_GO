@@ -67,7 +67,8 @@ Phase 6: Performance & Production (caching, monitoring, deployment)
   - Cache invalidation strategy
   - Implement guardrails (input/output validation, safety checks). Check against ban words. Implement a hybrid validator: static rules + Claude. 
   - Include traces in the response. Like Rewrite query, decision output, and what ever you think is important.
-  - Add euclidian distance support
+  - Add euclidian distance support.
+  - Perform search in document id. 
   - Test against a golden dataset. Create an evaluation solution with LLM as judge first metric
   - Implement pagination on search documents.
   - Add cobra CLI (extra, good to have for document insert.)

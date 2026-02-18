@@ -14,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/agent"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/cache"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/conversation"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/middleware"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/redis"
@@ -124,6 +125,7 @@ func main() {
 	searchClient := agent.NewSearchClient(searchConfig)
 	retrievalStrategy := strategy.NewRetrievalStrategy(miniClient)
 	conversationStore := conversation.NewRedisConversationStore(redisClient, redisTTL)
+	searchCache := cache.NewRedisSearchCache(redisClient, "search_cache:")
 	service := agent.NewService(
 		bedrockClient,
 		miniClient,
@@ -132,6 +134,7 @@ func main() {
 		searchClient,
 		conversationStore,
 		retrievalStrategy,
+		searchCache,
 	)
 	handler := agent.NewHandler(service)
 

@@ -4,12 +4,13 @@ Knowledge Graph Agent with Claude for document search and question answering.
 
 ## Features
 
-| Feature | Description |
+| Feature | Description | 
 |---------|-------------|
 | AWS Bedrock Integration | Claude API for reasoning and embeddings |
 | Model Selection | Automatic model choice (Haiku for simple, Sonnet for complex) |
 | Query Rewriting | Automatic query optimization using Claude |
 | Retrieval Strategy | Smart decision: search vs. answer from memory |
+| Redis Search Caching | 30-min cache for search results (10x faster repeat queries) |
 | Document Ingestion | Parse, chunk, and embed documents |
 | Semantic Search | Vector similarity search using pgvector |
 | Keyword Search | Full-text search using PostgreSQL |
@@ -31,6 +32,7 @@ kg-agent/
 ├── internal/
 │   ├── agent/       # Agent HTTP handlers and service
 │   ├── search/      # Search HTTP handlers and service
+│   ├── cache/       # Redis search result caching
 │   ├── strategy/    # Retrieval strategy (heuristic + LLM classifier)
 │   ├── conversation/# Conversation memory (Redis)
 │   ├── rewrite/     # Query rewriting service
@@ -247,6 +249,12 @@ Watch the logs to see retrieval decisions and model selection:
 - **Haiku** (fast, 10x cheaper): Simple queries without search (greetings, acknowledgments, simple follow-ups)
 - **Sonnet** (smart, high-quality): Complex queries or queries requiring documentation search
 
+**Search Cache:**
+- **Cache Hit**: Repeat queries return in ~5ms (vs 500ms)
+- **TTL**: 30 minutes
+- **Cost Savings**: ~70% reduction for repeat queries
+- **Monitor**: Watch logs for "Cache miss!" vs cache hits
+
 ### Agent API (with RAG)
 
 ### Conversation Memory Testing
@@ -322,12 +330,13 @@ curl -X POST http://localhost:8082/search/v1/hybrid \
 # }
 ```
 
-### Debug Redis Conversations
+### Debug Redis Conversations & Cache
 
 ```bash
 # Connect to Redis
 docker exec -it kg-agent-redis-1 redis-cli
 
+# === Conversation Store ===
 # List all active sessions
 SMEMBERS active_sessions
 
@@ -340,6 +349,22 @@ TTL conversation:550e8400-e29b-41d4-a716-446655440000
 # Delete a session manually (for testing)
 DEL conversation:550e8400-e29b-41d4-a716-446655440000
 SREM active_sessions 550e8400-e29b-41d4-a716-446655440000
+
+# === Search Cache ===
+# List all cached searches
+KEYS search_cache:*
+
+# Get a specific cached search result (use actual hash)
+GET search_cache:abc123...
+
+# Check cache TTL
+TTL search_cache:abc123...
+
+# Clear all search cache
+KEYS search_cache:* | xargs redis-cli DEL
+
+# Count cached entries
+KEYS search_cache:* | wc -l
 ```
 
 ## Development Commands

@@ -2,6 +2,8 @@ package agent
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
+	"github.com/povarna/generative-ai-with-go/kg-agent/internal/cache"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/conversation"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/rewrite"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/strategy"
@@ -23,6 +26,7 @@ type Service struct {
 	searchClient      *SearchClient
 	conversationStore conversation.ConversationStore
 	retrievalStrategy *strategy.RetrievalStrategy
+	searchCache       cache.SearchCache
 }
 
 func NewService(
@@ -32,7 +36,8 @@ func NewService(
 	rewriter *rewrite.Rewriter,
 	searchClient *SearchClient,
 	conversationStore conversation.ConversationStore,
-	retrievalStrategy *strategy.RetrievalStrategy) *Service {
+	retrievalStrategy *strategy.RetrievalStrategy,
+	searchCache cache.SearchCache) *Service {
 	return &Service{
 		bedrockClient:     bedrockClient,
 		miniClient:        miniClient,
@@ -41,6 +46,7 @@ func NewService(
 		searchClient:      searchClient,
 		conversationStore: conversationStore,
 		retrievalStrategy: retrievalStrategy,
+		searchCache:       searchCache,
 	}
 }
 
@@ -89,15 +95,6 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	}
 
 	return queryResponse, nil
-}
-
-func (s *Service) search(ctx context.Context, rewrittenQuery string) []SearchResult {
-	searchResults, err := s.searchClient.HybridSearch(ctx, rewrittenQuery, 5)
-	if err != nil {
-		log.Warn().Err(err).Msg("Search failed, continuing without context")
-		searchResults = nil // Continue without context
-	}
-	return searchResults
 }
 
 func (s *Service) QueryStream(ctx context.Context, queryRequest QueryRequest, flusher http.Flusher, writer io.Writer) error {
@@ -204,6 +201,40 @@ func (s *Service) rewriteQuery(ctx context.Context, queryRequest QueryRequest) s
 	return rewrittenQuery
 }
 
+func (s *Service) search(ctx context.Context, rewrittenQuery string) []SearchResult {
+	cacheKey := s.generateCacheKey(rewrittenQuery, "hybrid", 5)
+	value, err := s.searchCache.Get(ctx, cacheKey)
+
+	if err != nil {
+		log.Info().Msg("Cache miss!. Calling search api... ")
+		searchResults, err := s.searchClient.HybridSearch(ctx, rewrittenQuery, 5)
+		if err != nil {
+			log.Warn().Err(err).Msg("Search failed, continuing without context")
+			searchResults = nil // Continue without context
+		}
+
+		// Update cache
+		data, err := json.Marshal(searchResults)
+		if err == nil {
+			if err := s.searchCache.Set(ctx, cacheKey, data, 30*time.Minute); err != nil {
+				log.Warn().Err(err).Msg("Unable to cache query search result")
+			}
+		}
+
+		return searchResults
+	}
+
+	// CACHE HIT
+	var searchResult []SearchResult
+	if err := json.Unmarshal(value, &searchResult); err != nil {
+		log.Error().Err(err).Msg("Unable to deserialize response")
+		return nil
+	}
+
+	return searchResult
+
+}
+
 func (s *Service) saveConversationMessages(ctx context.Context, sessionID string, queryRequest QueryRequest, response *bedrock.ClaudeResponse) {
 	if sessionID == "" {
 		return // No session to save to
@@ -301,4 +332,10 @@ func (s *Service) selectModelForAnswer(decision strategy.Decision, hasSearchResu
 	// Complex queries or with search results → Use Sonnet
 	log.Info().Msg("Using Sonnet for complex query")
 	return s.bedrockClient
+}
+
+func (s *Service) generateCacheKey(query string, searchType string, limit int) string {
+	input := fmt.Sprintf("%s:%s:%d", query, searchType, limit)
+	hash := sha256.Sum256([]byte(input))
+	return fmt.Sprintf("%x", hash)
 }
