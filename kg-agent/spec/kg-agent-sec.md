@@ -47,7 +47,7 @@ Contains three sub-phases
   - Pass context to Claude
   - Test end-to-end
 
-Phase 5: Conversation & Tool Intelligence
+Phase 5: Intelligence
 Contains two sub-phases
 
   Phase 5A: Conversation Intelligence (Layer 1)
@@ -58,23 +58,19 @@ Contains two sub-phases
   - Multi-turn dialog support
   - Deliverable: Agent that can handle natural conversations with context
 
-  Phase 5B: Tool Calling & Caching (Layer 2)
+  Phase 5B: Smart agent selection (Layer 2)
   - Retrieval strategy agent (search vs. direct answer)
+  - Deliverable: Smart agent that only searches when needed
+
+Phase 6: Performance & Production (caching, monitoring, deployment)
   - Redis caching (persistent cache for search results)
   - Cache invalidation strategy
-  - Deliverable: Smart agent that only searches when needed, with persistent cache
-
-Phase 6: Answer Quality & Production Features
-  - Grounding validator (anti-hallucination checks)
-  - Confidence scoring
-  - Implement guardrails (input/output validation, safety checks)
-  - Multi-hop reasoning (chain multiple searches)
-  - Cross-encoder reranker (advanced relevance scoring)
+  - Implement guardrails (input/output validation, safety checks). Check against ban words. Implement a hybrid validator: static rules + Claude. 
+  - Include traces in the response. Like Rewrite query, decision output, and what ever you think is important.
   - Add euclidian distance support
-  - Implement pagination
-  - Add cobra CLI
-  - Deliverable: Production-ready documentation agent
+  - Test against a golden dataset. Create an evaluation solution with LLM as judge first metric
+  - Implement pagination on search documents.
+  - Add cobra CLI (extra, good to have for document insert.)
   - Add prometheus
   - Check metrics
-  - add Docker
-  - add ChinlitUI
+  - Add Docker
