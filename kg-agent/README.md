@@ -130,6 +130,7 @@ go run cmd/agent/main.go
 | `/api/v1/health` | GET | Health check |
 | `/api/v1/query` | POST | Query Claude (non-streaming, with conversation memory) |
 | `/api/v1/query/stream` | POST | Query Claude (streaming SSE, with conversation memory) |
+| `/api/v1/admin/cache/clear` | POST | Clear all cached search results |
 
 ### Search API (Port 8082)
 
@@ -328,6 +329,28 @@ curl -X POST http://localhost:8082/search/v1/hybrid \
 #   "count": 5,
 #   "method": "hybrid"
 # }
+```
+
+### Clear Search Cache
+
+```bash
+# Clear all cached search results via API
+$ curl -X POST http://localhost:8081/api/v1/admin/cache/clear \
+  -H "Content-Type: application/json"
+
+# Expected response:
+# {
+#   "status": "cache cleared"
+# }
+
+# Verify cache is empty
+docker exec -it kg-agent-redis-1 redis-cli KEYS "search_cache:*"
+# Should return: (empty array)
+
+# Use cases:
+# - After ingesting new documents (invalidate stale results)
+# - During testing (reset cache between test runs)
+# - Manual maintenance (if results seem outdated)
 ```
 
 ### Debug Redis Conversations & Cache
