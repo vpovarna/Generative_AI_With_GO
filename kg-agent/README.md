@@ -7,6 +7,7 @@ Knowledge Graph Agent with Claude for document search and question answering.
 | Feature | Description |
 |---------|-------------|
 | AWS Bedrock Integration | Claude API for reasoning and embeddings |
+| Model Selection | Automatic model choice (Haiku for simple, Sonnet for complex) |
 | Query Rewriting | Automatic query optimization using Claude |
 | Retrieval Strategy | Smart decision: search vs. answer from memory |
 | Document Ingestion | Parse, chunk, and embed documents |
@@ -58,6 +59,7 @@ Create a `.env` file:
 # AWS Configuration
 AWS_REGION=us-east-1
 CLAUDE_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
+CLAUDE_MINI_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
 
 # Database Configuration
 KG_AGENT_VECTOR_DB_HOST=localhost
@@ -145,7 +147,10 @@ The agent now intelligently decides when to search documentation vs. answer from
 ```bash
 curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Hello", "max_tokens": 100}' | jq .
+  -d '{
+    "prompt": "Hello", 
+    "max_tokens": 100
+  }' | jq .
 
 # Expected: Agent responds without searching (greeting detected by heuristic)
 ```
@@ -154,7 +159,10 @@ curl -X POST http://localhost:8081/api/v1/query \
 ```bash
 curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "How do I encrypt my files?", "max_tokens": 500}' | jq .
+  -d '{
+  "prompt": "How do I encrypt my files?", 
+  "max_tokens": 500
+  }' | jq .
 
 # Save the session_id from response!
 # Expected: Agent searches documentation and provides detailed answer
@@ -166,7 +174,7 @@ curl -X POST http://localhost:8081/api/v1/query \
 curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{
-    "session_id": "YOUR_SESSION_ID_HERE",
+    "session_id": "db4584c3-afe5-4bfb-990a-3df1332e67f9",
     "prompt": "tell me more about that",
     "max_tokens": 500
   }' | jq .
@@ -181,7 +189,7 @@ curl -X POST http://localhost:8081/api/v1/query \
 curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{
-    "session_id": "YOUR_SESSION_ID_HERE",
+    "session_id": "db4584c3-afe5-4bfb-990a-3df1332e67f9",
     "prompt": "What are the performance implications of it?",
     "max_tokens": 500
   }' | jq .
@@ -198,7 +206,7 @@ curl -X POST http://localhost:8081/api/v1/query \
     "session_id": "YOUR_SESSION_ID_HERE",
     "prompt": "How do I configure SSL certificates?",
     "max_tokens": 500
-  }' | jq .
+  }' | jq
 
 # Expected: Agent searches (new topic not in history)
 ```
@@ -208,7 +216,10 @@ curl -X POST http://localhost:8081/api/v1/query \
 # Start new session - ambiguous query
 curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "What about version 2 differences?", "max_tokens": 500}' | jq .
+  -d '{
+    "prompt": "What about version 2 differences?", 
+    "max_tokens": 500
+  }' | jq 
 
 # Expected: Heuristic has low confidence, LLM classifier decides
 # (Should search since no context for "version 2")
@@ -216,14 +227,25 @@ curl -X POST http://localhost:8081/api/v1/query \
 
 ### Monitor Decision Logic
 
-Watch the logs to see retrieval decisions:
+Watch the logs to see retrieval decisions and model selection:
 
 ```bash
 # In agent terminal, you'll see:
+
+# Retrieval Strategy Decision:
 # {"level":"info","method":"heuristic","message":"Using heuristic decision"}
 # OR
 # {"level":"info","method":"llm_fallback","message":"Low confidence, using LLM classifier"}
+
+# Model Selection:
+# {"level":"info","message":"Using Haiku for simple query"}  # Fast, cheap model
+# OR
+# {"level":"info","message":"Using Sonnet for complex query"}  # Smart, high-quality model
 ```
+
+**Model Selection Logic:**
+- **Haiku** (fast, 10x cheaper): Simple queries without search (greetings, acknowledgments, simple follow-ups)
+- **Sonnet** (smart, high-quality): Complex queries or queries requiring documentation search
 
 ### Agent API (with RAG)
 
@@ -247,7 +269,7 @@ curl -X POST http://localhost:8081/api/v1/query \
 curl -X POST http://localhost:8081/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{
-    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "55d97b9f-bb39-4288-9098-788a54e7a087",
     "prompt": "What about performance impact?",
     "max_tokens": 500
   }' | jq .

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	restful "github.com/emicklei/go-restful/v3"
 	"github.com/joho/godotenv"
@@ -13,10 +14,15 @@ import (
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/embedding"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/search"
 	"github.com/rs/cors"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
+	// Setup logging
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+
 	// Load env
 	if err := godotenv.Load(); err != nil {
 		log.Warn().Msg("No .env file found")

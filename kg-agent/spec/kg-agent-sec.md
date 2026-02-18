@@ -59,8 +59,6 @@ Contains two sub-phases
   - Deliverable: Agent that can handle natural conversations with context
 
   Phase 5B: Tool Calling & Caching (Layer 2)
-  - Implement tool calling (Claude decides when to search)
-  - Define search_documentation tool schema
   - Retrieval strategy agent (search vs. direct answer)
   - Redis caching (persistent cache for search results)
   - Cache invalidation strategy

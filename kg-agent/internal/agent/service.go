@@ -51,6 +51,8 @@ func (s *Service) Query(ctx context.Context, queryRequest QueryRequest) (QueryRe
 	// Decide if we need to search external documentation
 	decision := s.retrievalStrategy.Decide(ctx, queryRequest.Prompt, conversationHistory)
 
+	log.Info().Interface("decision", decision).Msg("Decision")
+
 	// Rewrite query
 	rewrittenQuery := s.rewriteQuery(ctx, queryRequest)
 	var searchResults []SearchResult
