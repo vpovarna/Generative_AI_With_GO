@@ -12,10 +12,10 @@ import (
 
 type Handler struct {
 	service    *Service
-	guardrails *guardrails.ClaudeValidator
+	guardrails *guardrails.Guardrails
 }
 
-func NewHandler(service *Service, guardrails *guardrails.ClaudeValidator) *Handler {
+func NewHandler(service *Service, guardrails *guardrails.Guardrails) *Handler {
 	return &Handler{
 		service:    service,
 		guardrails: guardrails,
@@ -39,7 +39,7 @@ func (h *Handler) Query(req *restful.Request, resp *restful.Response) {
 	}
 
 	// Validate input against guardrails
-	validation := h.guardrails.Validate(req.Request.Context(), queryRequest.Prompt)
+	validation := h.guardrails.ValidateInput(req.Request.Context(), queryRequest.Prompt)
 	if !validation.IsValid {
 		log.Warn().
 			Str("reason", validation.Reason).
@@ -89,7 +89,7 @@ func (h *Handler) QueryStream(req *restful.Request, resp *restful.Response) {
 	}
 
 	// Validate input against guardrails
-	validation := h.guardrails.Validate(req.Request.Context(), queryRequest.Prompt)
+	validation := h.guardrails.ValidateInput(req.Request.Context(), queryRequest.Prompt)
 	if !validation.IsValid {
 		log.Warn().
 			Str("reason", validation.Reason).

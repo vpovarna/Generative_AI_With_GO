@@ -122,7 +122,7 @@ func main() {
 		}
 	}
 
-	guardrailsValidator := guardrails.NewClaudeValidator(miniClient)
+	guardrailsValidator := guardrails.NewGuardrails(miniClient)
 	rewriter := rewrite.NewRewriter(miniClient)
 	searchClient := agent.NewSearchClient(searchConfig)
 	retrievalStrategy := strategy.NewRetrievalStrategy(miniClient)
