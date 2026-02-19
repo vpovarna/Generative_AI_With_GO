@@ -33,7 +33,7 @@ func NewPipeline(
 }
 
 // IngestDocument processes a file and stores it atomically
-func (p *Pipeline) IngestDocument(ctx context.Context, filePath string) error {
+func (p *Pipeline) IngestDocument(ctx context.Context, filePath string, customMetadata map[string]string) error {
 	log.Info().Str("file", filePath).Msg("Starting ingestion")
 
 	doc, err := p.parser.ParseFile(filePath)
@@ -57,7 +57,7 @@ func (p *Pipeline) IngestDocument(ctx context.Context, filePath string) error {
 
 	log.Info().Msg("Embeddings generated successfully")
 
-	if err := p.storeDocumentWithChunks(ctx, doc, chunks, embeddings); err != nil {
+	if err := p.storeDocumentWithChunks(ctx, doc, chunks, embeddings, customMetadata); err != nil {
 		return fmt.Errorf("failed to store document: %w", err)
 	}
 
@@ -75,6 +75,7 @@ func (p *Pipeline) storeDocumentWithChunks(
 	doc *Document,
 	chunks []Chunk,
 	embeddings [][]float32,
+	customMetadata map[string]string,
 ) error {
 	// Begin transaction
 	tx, err := p.pool.Begin(ctx)
@@ -106,9 +107,16 @@ func (p *Pipeline) storeDocumentWithChunks(
     `
 
 	for i, chunk := range chunks {
-		metadata := map[string]any{
-			"start": chunk.Start,
-			"end":   chunk.End,
+		var metadata map[string]any
+		if customMetadata != nil {
+			metadata = map[string]any{
+				"question":    customMetadata["question"],
+				"shortAnswer": customMetadata["shortAnswer"],
+			}
+		} else {
+			metadata = map[string]any{
+				"questionId": chunk.Index,
+			}
 		}
 		metadataJSON, _ := json.Marshal(metadata)
 

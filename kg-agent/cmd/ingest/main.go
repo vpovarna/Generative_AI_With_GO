@@ -2,23 +2,31 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/database"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/embedding"
 	"github.com/povarna/generative-ai-with-go/kg-agent/internal/ingestion"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
+	// Setup logging
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+
 	// TODO: replace this with cobra cli
 	insertDocCommand := flag.Bool("insert-doc", false, "Insert document command")
 	filePath := flag.String("filePath", "resources/test-input.txt", "Relative path to the document")
 	chunkSize := flag.Int("chunkSize", 500, "Chunk size")
 	chunkOverlap := flag.Int("chunkOverlap", 100, "Chunk overlap")
+	customMetadata := flag.String("customMetadata", "{}", "Custom metadata")
 
 	deleteDocCommand := flag.Bool("delete-doc", false, "Delete existing document command")
 	documentId := flag.String("doc-id", "", "Document id which needs to be delete")
@@ -90,7 +98,12 @@ func main() {
 		}
 	} else if *insertDocCommand {
 		// Ingest document (atomic operation)
-		if err := pipeline.IngestDocument(ctx, *filePath); err != nil {
+		var customMetadataMap map[string]string
+		err := json.Unmarshal([]byte(*customMetadata), &customMetadataMap)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Unable to unmarshal custom metadata")
+		}
+		if err := pipeline.IngestDocument(ctx, *filePath, customMetadataMap); err != nil {
 			log.Fatal().Err(err).Msg("Ingestion failed")
 		}
 		log.Info().Msg("Ingestion successful!")
