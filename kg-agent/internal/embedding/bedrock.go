@@ -69,15 +69,27 @@ func (e *BedrockEmbedder) GenerateEmbeddings(ctx context.Context, query string) 
 }
 
 func (e *BedrockEmbedder) GenerateBatchEmbeddings(ctx context.Context, queries []string) ([][]float32, error) {
-	embeddings := make([][]float32, len(queries))
-	for i, query := range queries {
-		embedding, err := e.GenerateEmbeddings(ctx, query)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate embedding for query %s: %w", query, err)
-		}
-
-		embeddings[i] = embedding
-
+	requestBody := map[string]any{
+		"inputText": queries,
 	}
-	return embeddings, nil
+
+	bodyBytes, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize input queries: %w", err)
+	}
+
+	output, err := e.client.InvokeModel(ctx, &bedrockruntime.InvokeModelInput{
+		ModelId: aws.String(e.modelID),
+		Accept:  aws.String("application/json"),
+		Body:    bodyBytes,
+	})
+
+	var response struct {
+		Embeddings [][]float32 `json:"embeddings"`
+	}
+	if err := json.Unmarshal(output.Body, &response); err != nil {
+		return nil, fmt.Errorf("Unable to read bedrock response, Error: %w", err)
+	}
+
+	return response.Embeddings, nil
 }

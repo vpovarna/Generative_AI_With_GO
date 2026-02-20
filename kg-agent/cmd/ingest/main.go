@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"os"
 	"time"
@@ -26,7 +25,7 @@ func main() {
 	filePath := flag.String("filePath", "resources/test-input.txt", "Relative path to the document")
 	chunkSize := flag.Int("chunkSize", 500, "Chunk size")
 	chunkOverlap := flag.Int("chunkOverlap", 100, "Chunk overlap")
-	customMetadata := flag.String("customMetadata", "{}", "Custom metadata")
+	documentType := flag.String("documentType", "", "Document type")
 
 	deleteDocCommand := flag.Bool("delete-doc", false, "Delete existing document command")
 	documentId := flag.String("doc-id", "", "Document id which needs to be delete")
@@ -97,14 +96,16 @@ func main() {
 
 		}
 	} else if *insertDocCommand {
-		// Ingest document (atomic operation)
-		var customMetadataMap map[string]string
-		err := json.Unmarshal([]byte(*customMetadata), &customMetadataMap)
-		if err != nil {
-			log.Fatal().Err(err).Msg("Unable to unmarshal custom metadata")
-		}
-		if err := pipeline.IngestDocument(ctx, *filePath, customMetadataMap); err != nil {
-			log.Fatal().Err(err).Msg("Ingestion failed")
+		if *documentType == "txt" {
+			if err := pipeline.IngestTextDocument(ctx, *filePath); err != nil {
+				log.Fatal().Err(err).Msg("Ingestion failed")
+			}
+		} else if *documentType == "json" {
+			if err := pipeline.IngestJsonDocument(ctx, *filePath); err != nil {
+				log.Fatal().Err(err).Msg("Ingestion failed")
+			}
+		} else {
+			log.Info().Msg("Unsupported document type. Ingestion pipeline supports only json and text documents")
 		}
 		log.Info().Msg("Ingestion successful!")
 	} else {
