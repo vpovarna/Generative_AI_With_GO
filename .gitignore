@@ -30,3 +30,8 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
+
+# Eval framework
+kg-agent/eval-framework/.data/
+kg-agent/eval-framework/.venv/
+kg-agent/eval-framework/scripts/
