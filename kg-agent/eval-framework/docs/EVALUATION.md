@@ -29,23 +29,12 @@ Transform each row into:
 ```json
 [
   {
-    "chunk_id": "nq_000001",
+    "chunk_id": "nq_000000",
     "document_id": "natural_questions",
-    "content": "A common example of permission marketing is a newsletter sent to an advertising firm's customers. Such newsletters inform customers of upcoming events or promotions, or new products. In this type of advertising, a company that wants to send a newsletter to their customers may ask them at the point of purchase if they would like to receive the newsletter.",
+    "content": "`` Don't You (Forget About Me) '' is a 1985 pop song performed by Scottish rock band Simple Minds. The song is best known for being played during the opening and closing credits of the John Hughes film The Breakfast Club. It was written and composed by producer Keith Dorsey and Steve Schiff, the latter of whom was a guitarist and songwriter from the Nina Hagen band.",
     "metadata": {
-      "question_id": "1",
-      "question": "which is the most common use of opt-in e-mail marketing",
-      "short_answer": "A newsletter sent to an advertising firm's customers"
-    }
-  },
-  {
-    "chunk_id": "nq_000002",
-    "document_id": "natural_questions",
-    "content": "...",
-    "metadata": {
-      "question_id": "2",
-      "question": "...",
-      "short_answer": "..."
+      "question": "what film has the song don't you forget about me",
+      "short_answer": "The Breakfast Club"
     }
   }
 ]
@@ -55,7 +44,6 @@ Transform each row into:
 - `chunk_id`: Unique identifier for the chunk (format: `nq_XXXXXX`)
 - `document_id`: Source document (all use `"natural_questions"`)
 - `content`: The long answer text (what gets embedded and searched)
-- `metadata.question_id`: Original question ID from dataset
 - `metadata.question`: Original question (for debugging and reference)
 - `metadata.short_answer`: Short answer (for future LLM judge evaluation)
 
