@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
@@ -69,27 +70,41 @@ func (e *BedrockEmbedder) GenerateEmbeddings(ctx context.Context, query string) 
 }
 
 func (e *BedrockEmbedder) GenerateBatchEmbeddings(ctx context.Context, queries []string) ([][]float32, error) {
-	requestBody := map[string]any{
-		"inputText": queries,
+	const CONCURRENT_LIMIT = 5 // Don't overwhelm API
+
+	embeddings := make([][]float32, len(queries))
+	errors := make([]error, len(queries))
+
+	// Process in groups of 5 concurrent requests
+	for i := 0; i < len(queries); i += CONCURRENT_LIMIT {
+		end := i + CONCURRENT_LIMIT
+		if end > len(queries) {
+			end = len(queries)
+		}
+
+		// Use sync.WaitGroup for this batch
+		var wg sync.WaitGroup
+		for j := i; j < end; j++ {
+			wg.Add(1)
+			go func(index int, query string) {
+				defer wg.Done()
+				embedding, err := e.GenerateEmbeddings(ctx, query)
+				if err != nil {
+					errors[index] = err
+					return
+				}
+				embeddings[index] = embedding
+			}(j, queries[j])
+		}
+		wg.Wait()
+
+		// Check for errors in this batch
+		for j := i; j < end; j++ {
+			if errors[j] != nil {
+				return nil, fmt.Errorf("failed to generate embedding for query %d: %w", j, errors[j])
+			}
+		}
 	}
 
-	bodyBytes, err := json.Marshal(requestBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize input queries: %w", err)
-	}
-
-	output, err := e.client.InvokeModel(ctx, &bedrockruntime.InvokeModelInput{
-		ModelId: aws.String(e.modelID),
-		Accept:  aws.String("application/json"),
-		Body:    bodyBytes,
-	})
-
-	var response struct {
-		Embeddings [][]float32 `json:"embeddings"`
-	}
-	if err := json.Unmarshal(output.Body, &response); err != nil {
-		return nil, fmt.Errorf("Unable to read bedrock response, Error: %w", err)
-	}
-
-	return response.Embeddings, nil
+	return embeddings, nil
 }

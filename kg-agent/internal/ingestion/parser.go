@@ -30,9 +30,6 @@ func (p *Parser) ParseFile(path string) (*Document, error) {
 
 	// Check file extension
 	ext := filepath.Ext(path)
-	if ext != ".txt" {
-		return nil, fmt.Errorf("unsupported file type %s (expected .txt)", ext)
-	}
 
 	// Read file content
 	bytes, err := os.ReadFile(path)

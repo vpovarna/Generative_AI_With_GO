@@ -86,7 +86,9 @@ func (p *Pipeline) IngestJsonDocument(ctx context.Context, filePath string) erro
 		return err
 	}
 
-	// ✅ INSERT DOCUMENT ONCE (before loop)
+	// Start transaction
+	tx, err := p.pool.Begin(ctx)
+
 	if err := p.insertDocument(ctx, doc); err != nil {
 		return err
 	}
@@ -106,6 +108,7 @@ func (p *Pipeline) IngestJsonDocument(ctx context.Context, filePath string) erro
 			entryMetadata := map[string]any{
 				"question":    entry.Metadata.Question,
 				"shortAnswer": entry.Metadata.ShortAnswer,
+				"chunk_id":    entry.ChunkID,
 			}
 			chunks = append(chunks, Chunk{
 				Index:    i + j,
@@ -120,7 +123,6 @@ func (p *Pipeline) IngestJsonDocument(ctx context.Context, filePath string) erro
 			return err
 		}
 
-		// ✅ Only insert chunks (document already exists)
 		if err := p.storeChunksOnly(ctx, doc.ID, chunks, batchEmbeddings); err != nil {
 			return fmt.Errorf("failed to store chunks: %w", err)
 		}
@@ -128,8 +130,14 @@ func (p *Pipeline) IngestJsonDocument(ctx context.Context, filePath string) erro
 		log.Info().Int("batch", i/BATCH_SIZE+1).Int("chunks", len(chunks)).Msg("Batch complete")
 	}
 
-	return nil
+	// Commit EVERYTHING at once
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
 
+	log.Info().Str("doc_id", doc.ID).Int("total_chunks", len(entries)).Msg("Ingestion complete")
+
+	return nil
 }
 
 // storeDocumentWithChunks stores document and chunks in a single transaction
