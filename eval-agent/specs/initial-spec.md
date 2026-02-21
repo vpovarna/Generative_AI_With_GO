@@ -30,7 +30,7 @@ Create a standalone evaluation engine that scores a single agent response using 
 Step 1 — Core Types
 
 Define the data contracts everything else builds on:
- - EvaluationRequest — {query, context, answer}
+ - EvaluationRequest — {query, context, answer, ...}
  - EvaluationContext — normalized internal form
  - StageResult — {name, score float64, reason string, duration}
  - EvaluationResult — {id, stages []StageResult, confidence float64, verdict string}
