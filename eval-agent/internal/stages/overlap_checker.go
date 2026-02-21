@@ -12,6 +12,10 @@ type OverlapChecker struct {
 	MinOverlapThreshold float64
 }
 
+func NewOverlapChecker() *OverlapChecker {
+	return &OverlapChecker{}
+}
+
 // OverlapChecker scores an answer based on keyword overlap with the query.
 // It tokenizes both strings, computes the ratio of shared unique words,
 // and returns a low score if the answer doesn't share enough terms with the query.

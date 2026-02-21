@@ -11,6 +11,10 @@ import (
 type FormatChecker struct {
 }
 
+func NewFormatChecker() *FormatChecker {
+	return &FormatChecker{}
+}
+
 var repeatedPunctuation = regexp.MustCompile(`[!?.]{3,}`)
 
 func (c *FormatChecker) Check(evaluationContext models.EvaluationContext) models.StageResult {

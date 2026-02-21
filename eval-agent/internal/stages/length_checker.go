@@ -10,6 +10,10 @@ import (
 type LengthChecker struct {
 }
 
+func NewLengthChecker() *LengthChecker {
+	return &LengthChecker{}
+}
+
 // LengthChecker scores an answer based on its length relative to the query.
 // It computes the character ratio between answer and query, penalizing answers
 // that are too short (score 0.0) or excessively long (score 0.5).
