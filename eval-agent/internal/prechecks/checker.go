@@ -1,4 +1,4 @@
-package stages
+package prechecks
 
 import (
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"

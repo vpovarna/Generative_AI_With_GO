@@ -5,8 +5,8 @@ import (
 )
 
 type Weights struct {
-	Stage1 float64
-	Stage2 float64
+	PreChecks float64
+	LLMJudge  float64
 }
 
 type Aggregator struct {
@@ -36,14 +36,14 @@ func (a *Aggregator) Aggregate(id string, stage1 []models.StageResult, stage2 []
 	}
 
 	if len(stage1) == 0 || len(stage2) == 0 {
-		result.Verdict = "No stage checked"
+		result.Verdict = models.VerdictFail
 		return result
 	}
 
 	stage1Avg := stage1Score / float64(len(stage1))
 	stage2Avg := stage2Score / float64(len(stage2))
 
-	confidence := (stage1Avg * a.Weights.Stage1) + (stage2Avg * a.Weights.Stage2)
+	confidence := (stage1Avg * a.Weights.PreChecks) + (stage2Avg * a.Weights.LLMJudge)
 
 	result.Confidence = confidence
 	result.Verdict = a.calculateVerdict(confidence)

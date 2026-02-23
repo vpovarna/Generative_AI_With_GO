@@ -6,27 +6,27 @@ import (
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/aggregator"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/stages"
+	"github.com/povarna/generative-ai-with-go/eval-agent/internal/prechecks"
 )
 
 type Executor struct {
-	stageRunner        *stages.StageRunner
-	judgeRunner        *judge.JudgeRunner
-	aggregator         *aggregator.Aggregator
-	earlyExitThreshold float64
+	precheckStageRunner *prechecks.StageRunner
+	judgeRunner         *judge.JudgeRunner
+	aggregator          *aggregator.Aggregator
+	earlyExitThreshold  float64
 }
 
 func NewExecutor(
-	stageRunner *stages.StageRunner,
+	stageRunner *prechecks.StageRunner,
 	judgeRunner *judge.JudgeRunner,
 	aggregator *aggregator.Aggregator,
 	earlyExitThreshold float64,
 ) *Executor {
 	return &Executor{
-		stageRunner:        stageRunner,
-		judgeRunner:        judgeRunner,
-		aggregator:         aggregator,
-		earlyExitThreshold: earlyExitThreshold,
+		precheckStageRunner: stageRunner,
+		judgeRunner:         judgeRunner,
+		aggregator:          aggregator,
+		earlyExitThreshold:  earlyExitThreshold,
 	}
 }
 
@@ -39,7 +39,7 @@ func (e *Executor) Execute(ctx context.Context, evalCtx models.EvaluationContext
 		Verdict:    "",
 	}
 
-	stageEvalResults := e.stageRunner.Run(evalCtx)
+	stageEvalResults := e.precheckStageRunner.Run(evalCtx)
 
 	if len(stageEvalResults) == 0 {
 		result.Verdict = models.VerdictFail
