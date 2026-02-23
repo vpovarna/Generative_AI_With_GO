@@ -50,6 +50,7 @@ func (j *FaithfulnessJudge) Evaluate(ctx context.Context, evaluationContext mode
 
 	var llmResponse judgeResponse
 	if err := json.Unmarshal([]byte(resp.Content), &llmResponse); err != nil {
+		j.logger.Error().Err(err).Msg("Failed to deserialize")
 		result.Reason = "Failed to deserialize LLM response"
 		result.Duration = time.Since(now)
 		return result
@@ -72,5 +73,6 @@ Penalize if the answer introduces facts not present in the context.
 Context: %s
 Answer: %s
 
-Respond ONLY in JSON: {"score": <float>, "reason": "<string>"}`, evaluationContext.Context, evaluationContext.Answer)
+Respond ONLY in raw JSON with no markdown, no code blocks, no explanation:
+{"score": <float>, "reason": "<string>"}`, evaluationContext.Context, evaluationContext.Answer)
 }

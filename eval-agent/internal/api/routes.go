@@ -35,4 +35,5 @@ func RegisterRoutes(container *restful.Container, handler *Handler) {
 			Returns(400, "Bad Request", middleware.ErrorResponse{}).
 			Returns(500, "Internal Server Error", middleware.ErrorResponse{}))
 
+	container.Add(ws)
 }
