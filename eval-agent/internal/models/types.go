@@ -18,23 +18,24 @@ const (
 )
 
 type Agent struct {
-	Name    string
-	Type    string
-	Version string
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Version string `json:"version"`
 }
 
 type Interaction struct {
-	UserQuery string
-	Context   string
-	Answer    string
+	UserQuery string `json:"user_query"`
+	Context   string `json:"context"`
+	Answer    string `json:"answer"`
 }
 
 // Input message
+
 type EvaluationRequest struct {
-	EventID     string
-	EventType   EventType
-	Agent       Agent
-	Interaction Interaction
+	EventID     string      `json:"event_id"`
+	EventType   EventType   `json:"event_type"`
+	Agent       Agent       `json:"agent"`
+	Interaction Interaction `json:"interaction"`
 }
 
 // Normalized internal object
@@ -48,16 +49,16 @@ type EvaluationContext struct {
 
 // One evaluator's output
 type StageResult struct {
-	Name     string
-	Score    float64
-	Reason   string
-	Duration time.Duration
+	Name     string        `json:"name"`
+	Score    float64       `json:"score"`
+	Reason   string        `json:"reason"`
+	Duration time.Duration `json:"duration_ns"`
 }
 
 // Final output emitted to Kafka
 type EvaluationResult struct {
-	ID         string
-	Stages     []StageResult
-	Confidence float64
-	Verdict    Verdict
+	ID         string        `json:"id"`
+	Stages     []StageResult `json:"stages"`
+	Confidence float64       `json:"confidence"`
+	Verdict    Verdict       `json:"verdict"`
 }

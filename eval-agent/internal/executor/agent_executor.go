@@ -19,14 +19,14 @@ type Executor struct {
 }
 
 func NewExecutor(
-	stageRunner *prechecks.StageRunner,
+	prechecks *prechecks.StageRunner,
 	judgeRunner *judge.JudgeRunner,
 	aggregator *aggregator.Aggregator,
 	earlyExitThreshold float64,
 	logger *zerolog.Logger,
 ) *Executor {
 	return &Executor{
-		precheckStageRunner: stageRunner,
+		precheckStageRunner: prechecks,
 		judgeRunner:         judgeRunner,
 		aggregator:          aggregator,
 		earlyExitThreshold:  earlyExitThreshold,
