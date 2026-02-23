@@ -35,3 +35,7 @@ go.work.sum
 kg-agent/eval-framework/.data/
 kg-agent/eval-framework/.venv/
 kg-agent/eval-framework/scripts/
+
+# Main files
+eval-agent/main
+kg-agent/main

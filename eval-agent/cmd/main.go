@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -37,7 +37,8 @@ func main() {
 
 	// Initialize Bedrock client for embeddings
 	region := os.Getenv("AWS_REGION")
-	bedrockClient, err := bedrock.NewClient(ctx, region, "")
+	modelID := os.Getenv("CLAUDE_MODEL_ID")
+	bedrockClient, err := bedrock.NewClient(ctx, region, modelID)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create Bedrock client")
 	}
@@ -90,7 +91,7 @@ func main() {
 	}
 
 	addr := fmt.Sprintf(":%s", port)
-	log.Info().Str("address", addr).Msg("Starting Search API")
+	log.Info().Str("address", addr).Msg("Starting Eval Agent API")
 
 	server := http.Server{
 		Addr:    addr,
