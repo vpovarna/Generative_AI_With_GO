@@ -81,6 +81,36 @@ func extractUniqueTokens(tokens []string) map[string]bool {
 	return unique
 }
 
+var stopWords = map[string]bool{
+	"a": true, "an": true, "the": true, "is": true, "are": true,
+	"was": true, "were": true, "be": true, "been": true, "being": true,
+	"have": true, "has": true, "had": true, "do": true, "does": true,
+	"did": true, "will": true, "would": true, "could": true, "should": true,
+	"of": true, "at": true, "by": true, "for": true, "with": true,
+	"about": true, "against": true, "between": true, "into": true,
+	"through": true, "during": true, "before": true, "after": true,
+	"to": true, "from": true, "in": true, "on": true,
+}
+
 func (c *OverlapChecker) stringTokenizer(s string) []string {
-	return strings.Split(s, " ")
+	s = strings.ToLower(s)
+	s = removePunctuation(s)
+
+	tokens := []string{}
+	for word := range strings.FieldsSeq(s) {
+		if !stopWords[word] && len(word) > 1 {
+			tokens = append(tokens, word)
+		}
+	}
+	return tokens
+
+}
+
+func removePunctuation(s string) string {
+	return strings.Map(func(r rune) rune {
+		if strings.ContainsRune(".,!?;:()[]{}\"'", r) {
+			return -1 // Remove this rune
+		}
+		return r
+	}, s)
 }
