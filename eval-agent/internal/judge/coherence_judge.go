@@ -70,5 +70,6 @@ Do NOT consider whether the answer is correct or relevant — only evaluate its 
 
 Answer: %s
 
-Respond ONLY in JSON: {"score": <float>, "reason": "<string>"}`, evaluationContext.Answer)
+Respond ONLY in raw JSON with no markdown, no code blocks, no explanation:
+{"score": <float>, "reason": "<string>"}`, evaluationContext.Answer)
 }

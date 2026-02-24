@@ -70,5 +70,6 @@ Score how relevant the answer is to the query on a scale from 0.1 to 1.0
 Query: %s
 Answer: %s
 
-Respond ONLY in JSON: {"score": <float>, "reason": "<string>"}`, evaluationContext.Query, evaluationContext.Answer)
+Respond ONLY in raw JSON with no markdown, no code blocks, no explanation:
+{"score": <float>, "reason": "<string>"}`, evaluationContext.Query, evaluationContext.Answer)
 }

@@ -79,6 +79,7 @@ func main() {
 		judge.NewCoherenceJudge(bedrockClient, &logger),
 		judge.NewFaithfulnessJudge(bedrockClient, &logger),
 		judge.NewCompletenessJudge(bedrockClient, &logger),
+		judge.NewInstructionJudge(bedrockClient, &logger),
 	}, &logger)
 
 	// Aggregator

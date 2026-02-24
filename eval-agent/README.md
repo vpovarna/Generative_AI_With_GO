@@ -37,6 +37,8 @@ If the average Stage 1 score is below the `EARLY_EXIT_THRESHOLD` (default `0.2`)
 | `RelevanceJudge` | Does the answer address the query? |
 | `FaithfulnessJudge` | Is the answer grounded in the provided context (no hallucinations)? |
 | `CoherenceJudge` | Is the answer internally logically consistent? |
+| `CompletenessJudge` | Does the answer fully address all distinct questions/sub-requests in the query? |
+| `InstructionJudge` | Does the answer follow explicit instructions (format, count, style, etc.)? |
 
 Each judge returns a `score` (0.0–1.0) and a `reason` string parsed from a structured JSON LLM response.
 
@@ -229,3 +231,22 @@ curl -X POST http://localhost:18081/api/v1/evaluate \
 ```
 
 Expected: `"verdict": "fail"` Low completeness score (only addressed encryption, missed decryption and examples)
+
+
+### Test Instruction judge
+```bash
+  curl -X POST http://localhost:18081/api/v1/evaluate \
+    -H "Content-Type: application/json" \
+    -d '{
+      "event_id": "test-off-by-one",
+      "event_type": "agent_response",
+      "agent": {"name": "test", "type": "rag", "version": "1.0"},
+      "interaction": {
+        "user_query": "Give me 3 examples of encryption algorithms",
+        "context": "Common algorithms: AES, RSA, ChaCha20, Blowfish",
+        "answer": "Examples of encryption algorithms are AES, RSA, ChaCha20, and Blowfish."
+      }
+    }' | jq '.stages[] | select(.name=="instruction-judge")'
+```
+
+Expected: `"verdict": "pass". asked for 3, gave 4 - minor overshoot

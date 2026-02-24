@@ -11,6 +11,9 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// CompletenessJudge evaluates whether the model answer fully addresses all distinct
+// questions or sub-requests in the user query. It scores 1.0 if every part is covered,
+// 0.5 if some are missing or incomplete, and 0.0 if major parts are ignored.
 type CompletenessJudge struct {
 	llmClient *bedrock.Client
 	logger    *zerolog.Logger
@@ -75,5 +78,6 @@ Score:
   - 0.5: Some parts missing or incomplete
   - 0.0: Major parts ignored
 
-Return JSON: {"score": <float>, "reason": "<which parts were addressed>"}`, evaluationContext.Query, evaluationContext.Answer)
+Respond ONLY in raw JSON with no markdown, no code blocks, no explanation:
+{"score": <float>, "reason": "<which parts were addressed>"}`, evaluationContext.Query, evaluationContext.Answer)
 }
