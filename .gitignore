@@ -40,3 +40,4 @@ kg-agent/eval-framework/scripts/
 eval-agent/main
 eval-agent/bin/
 kg-agent/main
+.mcp.json

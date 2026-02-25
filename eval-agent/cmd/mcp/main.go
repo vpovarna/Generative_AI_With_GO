@@ -26,7 +26,7 @@ func main() {
 
 	// Load env
 	if err := godotenv.Load(); err != nil {
-		logger.Warn().Msg("No .env file found")
+		logger.Error().Err(err).Msg("No .env file found")
 	}
 
 	// Graceful shutdown on SIGINT/SIGTERM
