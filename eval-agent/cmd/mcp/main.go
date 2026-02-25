@@ -73,6 +73,9 @@ func main() {
 		judge.NewInstructionJudge(bedrockClient, &logger),
 	}, &logger)
 
+	// Judge Factory for single judge evaluation
+	judgeFactory := judge.NewJudgeFactory(bedrockClient, &logger)
+
 	// Aggregator
 	agg := aggregator.NewAggregator(aggregator.Weights{
 		PreChecks: precheckWeight,
@@ -85,6 +88,7 @@ func main() {
 		earlyExit = 0.2
 	}
 	exec := executor.NewExecutor(stageRunner, judgeRunner, agg, earlyExit, &logger)
+	judgeExec := executor.NewJudgeExecutor(judgeFactory, &logger)
 
 	// Create MCP Server
 	server := mcp.NewServer(
@@ -94,11 +98,16 @@ func main() {
 		}, nil,
 	)
 
-	// Add Tool
+	// Add Tools
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "evaluate_response",
 		Description: "Evaluate an AI agent response for relevance, faithfulness, coherence, completeness, and instruction-following",
 	}, mcpadapter.NewEvaluateHandler(exec))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "evaluate_single_judge",
+		Description: "Evaluate with a single judge (relevance, faithfulness, coherence, completeness, or instruction). Faster than full pipeline.",
+	}, mcpadapter.NewEvaluateSingleJudgeHandler(judgeExec))
 
 	// Run over stdio
 	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil {
