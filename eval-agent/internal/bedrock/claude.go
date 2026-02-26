@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/rand"
+	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
@@ -86,4 +90,82 @@ func (c *Client) InvokeModel(ctx context.Context, request ClaudeRequest) (*Claud
 		Content:    content,
 		StopReason: response.StopReason,
 	}, nil
+}
+
+func (c *Client) InvokeModelWithRetry(ctx context.Context, request ClaudeRequest) (*ClaudeResponse, error) {
+	var lastErr error
+
+	for attempt := 0; attempt < c.MaxRetries; attempt++ {
+		response, err := c.InvokeModel(ctx, request)
+		if err == nil {
+			return response, nil
+		}
+
+		lastErr = err
+
+		if attempt == c.MaxRetries {
+			break
+		}
+
+		// Check if error is retryable
+		if !isRetryableError(err) {
+			return nil, fmt.Errorf("non-retryable error: %w", err)
+		}
+
+		delay := calculateBackoff(attempt, c.InitialDelay, c.MaxDelay)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(delay):
+			continue
+		}
+	}
+
+	return nil, fmt.Errorf("max retries %d exceeded: %w", c.MaxRetries, lastErr)
+}
+
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := err.Error()
+
+	// 1. Throttling errors
+	if strings.Contains(errStr, "ThrottlingException") ||
+		strings.Contains(errStr, "TooManyRequestsException") ||
+		strings.Contains(errStr, "Rate exceeded") {
+		return true
+	}
+
+	// 2. Service errors (5xx)
+	if strings.Contains(errStr, "InternalServerException") ||
+		strings.Contains(errStr, "ServiceUnavailableException") ||
+		strings.Contains(errStr, "500") ||
+		strings.Contains(errStr, "503") {
+		return true
+	}
+
+	// 3. Network errors
+	if strings.Contains(errStr, "connection reset") ||
+		strings.Contains(errStr, "EOF") ||
+		strings.Contains(errStr, "timeout") {
+		return true
+	}
+
+	// Non-retryable errors (4xx client errors, validation errors, etc.)
+	return false
+}
+
+func calculateBackoff(attempt int, initialDelay, maxDelay time.Duration) time.Duration {
+	backoff := float64(initialDelay) + math.Pow(2, float64(attempt))
+
+	if backoff > float64(maxDelay) {
+		backoff = float64(maxDelay)
+	}
+
+	jitter := backoff * 0.2 * (2*rand.Float64() - 1) // Random value between -20& and +20%
+	backoff += jitter
+
+	return time.Duration(backoff)
 }
