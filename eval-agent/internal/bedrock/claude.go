@@ -103,10 +103,6 @@ func (c *Client) InvokeModelWithRetry(ctx context.Context, request ClaudeRequest
 
 		lastErr = err
 
-		if attempt == c.MaxRetries {
-			break
-		}
-
 		// Check if error is retryable
 		if !isRetryableError(err) {
 			return nil, fmt.Errorf("non-retryable error: %w", err)
@@ -164,7 +160,7 @@ func calculateBackoff(attempt int, initialDelay, maxDelay time.Duration) time.Du
 		backoff = float64(maxDelay)
 	}
 
-	jitter := backoff * 0.2 * (2*rand.Float64() - 1) // Random value between -20& and +20%
+	jitter := backoff * 0.2 * (2*rand.Float64() - 1) // Random value between -20% and +20%
 	backoff += jitter
 
 	return time.Duration(backoff)
