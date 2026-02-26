@@ -3,25 +3,37 @@ package executor
 import (
 	"context"
 
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/aggregator"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/judge"
 	"github.com/povarna/generative-ai-with-go/eval-agent/internal/models"
-	"github.com/povarna/generative-ai-with-go/eval-agent/internal/prechecks"
 	"github.com/rs/zerolog"
 )
 
+// PrecheckRunner runs precheck stage evaluations
+type PrecheckRunner interface {
+	Run(evalCtx models.EvaluationContext) []models.StageResult
+}
+
+// JudgeRunner runs LLM judge evaluations
+type JudgeRunner interface {
+	Run(ctx context.Context, evalCtx models.EvaluationContext) []models.StageResult
+}
+
+// Aggregator aggregates stage results into final evaluation
+type Aggregator interface {
+	Aggregate(id string, stage1 []models.StageResult, stage2 []models.StageResult) models.EvaluationResult
+}
+
 type Executor struct {
-	precheckStageRunner *prechecks.StageRunner
-	judgeRunner         *judge.JudgeRunner
-	aggregator          *aggregator.Aggregator
+	precheckStageRunner PrecheckRunner
+	judgeRunner         JudgeRunner
+	aggregator          Aggregator
 	earlyExitThreshold  float64
 	logger              *zerolog.Logger
 }
 
 func NewExecutor(
-	prechecks *prechecks.StageRunner,
-	judgeRunner *judge.JudgeRunner,
-	aggregator *aggregator.Aggregator,
+	prechecks PrecheckRunner,
+	judgeRunner JudgeRunner,
+	aggregator Aggregator,
 	earlyExitThreshold float64,
 	logger *zerolog.Logger,
 ) *Executor {

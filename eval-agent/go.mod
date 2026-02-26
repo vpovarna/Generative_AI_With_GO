@@ -49,6 +49,7 @@ require (
 	github.com/segmentio/encoding v0.5.3 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/mock v0.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
