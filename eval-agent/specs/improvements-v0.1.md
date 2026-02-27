@@ -12,7 +12,7 @@ This document outlines the phased implementation plan to evolve eval-agent from 
 - Redis Stream support for async processing
 
 **Target State:**
-- YAML-driven configurable judges
+- ✅ YAML-driven configurable judges **(COMPLETED)**
 - Batch dataset evaluation CLI
 - Human annotation validation workflow
 - Correlation analysis (Kendall's tau)
