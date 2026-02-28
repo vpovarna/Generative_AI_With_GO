@@ -25,6 +25,43 @@ go run cmd/batch/main.go -input resources/dataset.jsonl -output results.jsonl
 
 **Total:** 20 test cases
 
+### annotated_sample.jsonl
+
+A validation dataset with 20 evaluation requests that include human annotations. Used for testing validation mode and computing Kendall's correlation between LLM judges and human judgment.
+
+**Use with validation mode:**
+```bash
+cd eval-agent
+go run cmd/batch/main.go \
+  -input resources/annotated_sample.jsonl \
+  -validate \
+  -correlation-threshold 0.3
+```
+
+**Features:**
+- Each record includes `human_annotation` field: "pass", "review", or "fail"
+- Designed to test correlation analysis
+- Mix of perfect, moderate, and poor answers
+- Expected Kendall's τ > 0.5 (moderate to strong agreement)
+
+**Sample record:**
+```json
+{
+  "event_id": "val-001",
+  "interaction": {
+    "user_query": "What is the capital of France?",
+    "context": "France is a country...",
+    "answer": "The capital of France is Paris."
+  },
+  "human_annotation": "pass"
+}
+```
+
+**Distribution:**
+- Pass: 8 records
+- Review: 6 records
+- Fail: 6 records
+
 ### payloads/
 
 Directory containing individual JSON payload examples for testing the HTTP API:

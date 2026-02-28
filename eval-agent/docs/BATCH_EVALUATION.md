@@ -28,6 +28,8 @@ go run cmd/batch/main.go -input dataset.jsonl -output results.jsonl
 | `-workers` | int | 5 | Concurrent evaluation workers |
 | `-continue-on-error` | bool | true | Continue on evaluation failures |
 | `-dry-run` | bool | false | Validate input without evaluating |
+| `-validate` | bool | false | Validation mode: compute correlation with human annotations |
+| `-correlation-threshold` | float | 0.3 | Kendall's tau threshold for validation |
 
 ## Input Format (JSONL)
 
@@ -112,6 +114,109 @@ cat dataset.jsonl | go run cmd/batch/main.go -input - | jq 'select(.verdict=="fa
 go run cmd/batch/main.go \
   -input dataset.jsonl \
   -dry-run
+```
+
+### Validation Mode (Human Annotation Correlation)
+
+Validate LLM judge accuracy against human annotations by computing Kendall's correlation.
+
+**Requirements:**
+- Input file must have `human_annotation` field for each record
+- Valid values: `"pass"`, `"review"`, `"fail"`
+
+**Example:**
+```bash
+go run cmd/batch/main.go \
+  -input annotated_sample.jsonl \
+  -validate \
+  -correlation-threshold 0.3
+```
+
+**Input record with human annotation:**
+```jsonl
+{
+  "event_id":"val-001",
+  "event_type":"agent_response",
+  "agent":{"name":"test","type":"rag","version":"1.0"},
+  "interaction":{
+    "user_query":"What is the capital of France?",
+    "context":"France is a country...",
+    "answer":"The capital of France is Paris."
+  },
+  "human_annotation":"pass"
+}
+```
+
+**Output (JSON to stdout):**
+```json
+{
+  "total_records": 20,
+  "agreement_count": 15,
+  "agreement_rate": 0.75,
+  "kendall_tau": 0.42,
+  "threshold": 0.3,
+  "passed": true,
+  "confusion_matrix": {
+    "pass_pass": 7,
+    "pass_review": 1,
+    "pass_fail": 0,
+    "review_pass": 1,
+    "review_review": 5,
+    "review_fail": 1,
+    "fail_pass": 0,
+    "fail_review": 0,
+    "fail_fail": 5
+  },
+  "interpretation": "Moderate agreement"
+}
+```
+
+**Logs (to stderr):**
+```
+INFO Validation mode enabled
+INFO Evaluating 20 records with human annotations...
+INFO Evaluation complete duration=15.2s
+INFO Computing Kendall's correlation...
+INFO Validation complete records=20 agreement=15 agreement_rate=0.75 kendall_tau=0.42 threshold=0.3 status="PASSED" interpretation="Moderate agreement"
+INFO Validation summary written file=validation-summary.json
+INFO LLM judge validated against human annotations
+INFO Safe to evaluate full dataset with these judge prompts
+```
+
+**If correlation is below threshold:**
+```
+ERROR Validation failed: Kendall's tau below threshold tau=0.18 threshold=0.3
+ERROR Review configs/judges.yaml prompts and re-run validation
+```
+
+**Output format:**
+
+The validation result is output as JSON to **stdout** (for piping to tools like `jq`), and also saved to `validation-summary.json`:
+
+```bash
+# Pipe to jq
+go run cmd/batch/main.go -input annotated.jsonl -validate | jq '.kendall_tau'
+
+# Save to file
+go run cmd/batch/main.go -input annotated.jsonl -validate > my-validation.json
+```
+
+The JSON structure:
+```json
+{
+  "total_records": 20,
+  "agreement_count": 15,
+  "agreement_rate": 0.75,
+  "kendall_tau": 0.42,
+  "threshold": 0.3,
+  "passed": true,
+  "confusion_matrix": {
+    "pass_pass": 7,
+    "pass_review": 1,
+    ...
+  },
+  "interpretation": "Moderate agreement"
+}
 ```
 
 ## Test Cases
@@ -228,6 +333,49 @@ go run cmd/batch/main.go -input test.jsonl -format csv
 - Exit code: 1
 - Fatal error: "Invalid format. Supported: jsonl, summary"
 - No processing occurs
+
+### Test Case 8: Validation Mode (Human Annotation Correlation)
+
+**Input:** `resources/annotated_sample.jsonl` (20 records with human annotations)
+
+**Command:**
+```bash
+go run cmd/batch/main.go \
+  -input resources/annotated_sample.jsonl \
+  -validate \
+  -correlation-threshold 0.3
+```
+
+**Expected Output (if correlation passes):**
+- Exit code: 0
+- Validation report printed with:
+  - Kendall's τ ≥ 0.3
+  - Agreement rate
+  - Confusion matrix
+  - Status: "PASSED"
+- `validation-summary.json` file created
+- Message: "LLM judge validated against human annotations"
+
+**Expected Output (if correlation fails):**
+- Exit code: 1
+- Validation report with:
+  - Kendall's τ < 0.3
+  - Status: "FAILED"
+- Error message about threshold
+- Guidance to review judge prompts
+
+**Test with missing annotations:**
+```bash
+# Create test file with missing human_annotation
+echo '{"event_id":"t1","interaction":{"user_query":"Test","answer":"Test"}}' > test-no-annotation.jsonl
+
+go run cmd/batch/main.go -input test-no-annotation.jsonl -validate
+```
+
+**Expected:**
+- Exit code: 1
+- Error: "Validation mode requires all records to have 'human_annotation' field"
+- Lists records missing annotations
 
 ## Performance
 

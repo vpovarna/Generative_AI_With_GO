@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
@@ -29,7 +31,8 @@ func main() {
 	workers := flag.Int("workers", 5, "Concurrent evaluators workers")
 	continueOnError := flag.Bool("continue-on-error", true, "Continue on evaluation failures")
 	dryRun := flag.Bool("dry-run", false, "Validate input without evaluating")
-	// progressInterval := flag.Int("progress-interval", 5, "Progress log interval (seconds)")
+	validate := flag.Bool("validate", false, "Validation mode: compute correlation with human annotations")
+	corrThreshold := flag.Float64("correlation-threshold", 0.3, "Kendall's tau threshold for validation")
 
 	flag.Parse()
 
@@ -81,6 +84,12 @@ func main() {
 	// Dry run validation
 	if *dryRun {
 		dryRunAndExit(records)
+	}
+
+	// Validation mode
+	if *validate {
+		runValidationMode(ctx, records, deps, *corrThreshold)
+		return
 	}
 
 	// Open output file
@@ -192,4 +201,107 @@ func dryRunAndExit(records []batch.InputRecord) {
 
 	log.Info().Msg("Validation successful")
 	os.Exit(0)
+}
+
+func runValidationMode(ctx context.Context, records []batch.InputRecord, deps *setup.Dependencies, threshold float64) {
+	log.Info().Msg("Validation mode enabled")
+
+	// Build map of event_id -> human_annotation for O(1) lookup
+	annotationMap := make(map[string]string)
+	missingAnnotations := 0
+
+	for _, record := range records {
+		if record.Request.HumanAnnotation == nil || *record.Request.HumanAnnotation == "" {
+			log.Error().
+				Int("line", record.LineNumber).
+				Str("event_id", record.Request.EventID).
+				Msg("Record missing human_annotation")
+			missingAnnotations++
+		} else {
+			annotationMap[record.Request.EventID] = *record.Request.HumanAnnotation
+		}
+	}
+
+	if missingAnnotations > 0 {
+		log.Fatal().
+			Int("missing", missingAnnotations).
+			Msg("Validation mode requires all records to have 'human_annotation' field")
+	}
+
+	log.Info().Int("total", len(records)).Msg("Evaluating records with human annotations...")
+
+	// Evaluate all records
+	processor := batch.NewProcessor(deps.Executor, 5, deps.Logger)
+	results := processor.Process(ctx, records)
+
+	// Collect annotation pairs using map lookup
+	var pairs []batch.AnnotationPair
+	for result := range results {
+		humanAnnotation, ok := annotationMap[result.ID]
+		if !ok {
+			log.Warn().Str("event_id", result.ID).Msg("No human annotation found for result")
+			continue
+		}
+
+		pairs = append(pairs, batch.AnnotationPair{
+			EventID:         result.ID,
+			HumanAnnotation: humanAnnotation,
+			LLMVerdict:      result.Verdict,
+			Confidence:      result.Confidence,
+		})
+	}
+
+	log.Info().Msg("Computing Kendall's correlation...")
+
+	// Validate
+	validationResult, err := batch.ValidateAnnotations(pairs, threshold)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Validation failed")
+	}
+
+	// Output validation result as JSON to stdout
+	validationJSON, err := json.MarshalIndent(validationResult, "", "  ")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to marshal validation result")
+	}
+	fmt.Println(string(validationJSON))
+
+	// Print summary to stderr (for logging)
+	printValidationSummary(validationResult)
+
+	// Write to file as well
+	summaryFile := "validation-summary.json"
+	if err := os.WriteFile(summaryFile, validationJSON, 0644); err == nil {
+		log.Info().Str("file", summaryFile).Msg("Validation summary written")
+	}
+
+	// Exit based on result
+	if !validationResult.Passed {
+		log.Error().
+			Float64("tau", validationResult.KendallTau).
+			Float64("threshold", threshold).
+			Msg("Validation failed: Kendall's tau below threshold")
+		log.Error().Msg("Review configs/judges.yaml prompts and re-run validation")
+		os.Exit(1)
+	}
+
+	log.Info().Msg("LLM judge validated against human annotations")
+	log.Info().Msg("Safe to evaluate full dataset with these judge prompts")
+}
+
+func printValidationSummary(result *batch.ValidationResult) {
+	status := "PASSED"
+	if !result.Passed {
+		status = "FAILED"
+	}
+
+	log.Info().
+		Int("records", result.TotalRecords).
+		Int("agreement", result.AgreementCount).
+		Float64("agreement_rate", result.AgreementRate).
+		Float64("kendall_tau", result.KendallTau).
+		Float64("threshold", result.Threshold).
+		Str("status", status).
+		Str("interpretation", result.Interpretation).
+		Msg("Validation complete")
 }

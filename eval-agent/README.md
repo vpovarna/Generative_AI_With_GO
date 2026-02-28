@@ -120,7 +120,7 @@ REST endpoints for real-time evaluation of agent responses. Supports full pipeli
 - Single judge evaluation with custom thresholds
 - Health check endpoint for monitoring
 
-📚 **Documentation:** [docs/API_TEST_CASES.md](docs/API_TEST_CASES.md)
+**Documentation:** [docs/API_TEST_CASES.md](docs/API_TEST_CASES.md)
 
 ### 2. Batch Processing (Offline)
 
@@ -131,8 +131,9 @@ CLI tool for evaluating datasets offline with concurrent workers. Processes JSON
 - JSONL and summary output formats
 - Graceful shutdown and dry-run validation
 - Progress tracking with timing
+- Validation mode: Compute Kendall's correlation against human annotations to validate LLM judge accuracy
 
-📦 **Documentation:** [docs/BATCH_EVALUATION.md](docs/BATCH_EVALUATION.md)
+**Documentation:** [docs/BATCH_EVALUATION.md](docs/BATCH_EVALUATION.md)
 
 ### 3. MCP Integration (Claude Code/Desktop/Cursor)
 
@@ -145,7 +146,7 @@ Expose eval-agent as a tool in Claude Code, Claude Desktop, or Cursor. Enables C
 
 ![eval-agent MCP tool in Claude Code](docs/image.png)
 
-🔌 **Documentation:** [docs/MCP_TEST_CASES.md](docs/MCP_TEST_CASES.md)
+**Documentation:** [docs/MCP_TEST_CASES.md](docs/MCP_TEST_CASES.md)
 
 ---
 

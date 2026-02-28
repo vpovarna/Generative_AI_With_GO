@@ -34,10 +34,11 @@ type Interaction struct {
 // Input message
 
 type EvaluationRequest struct {
-	EventID     string      `json:"event_id"`
-	EventType   EventType   `json:"event_type"`
-	Agent       Agent       `json:"agent"`
-	Interaction Interaction `json:"interaction"`
+	EventID          string      `json:"event_id"`
+	EventType        EventType   `json:"event_type"`
+	Agent            Agent       `json:"agent"`
+	Interaction      Interaction `json:"interaction"`
+	HumanAnnotation  *string     `json:"human_annotation,omitempty"` // Optional: for validation mode
 }
 
 // Normalized internal object

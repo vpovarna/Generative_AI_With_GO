@@ -13,8 +13,8 @@ This document outlines the phased implementation plan to evolve eval-agent from 
 
 **Target State:**
 - ✅ YAML-driven configurable judges **(COMPLETED)**
-- Batch dataset evaluation CLI
-- Human annotation validation workflow
-- Correlation analysis (Kendall's tau)
+- ✅ Batch dataset evaluation CLI
+- ✅ Human annotation validation workflow
+- ✅ Correlation analysis (Kendall's tau)
 - Iterative prompt improvement loop
 - Reference-based vs reference-free modes
