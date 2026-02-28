@@ -113,54 +113,7 @@ Batch Dataset Evaluation CLI Implementation Plan
  - Captures parse errors with line numbers
  - Context-cancellable
 
- Pattern:
- type InputRecord struct {
-     LineNumber int
-     Request    models.EvaluationRequest
-     Error      error
- }
-
- reader := batch.NewReader(file)
- records := reader.ReadAll(ctx) // Returns <-chan InputRecord
-
- 2. Batch Processor (internal/batch/processor.go)
-
- Responsibility: Coordinate worker pool, distribute evaluations, collect results
-
- Key features:
- - Worker pool pattern (similar to judge runner)
- - Fixed number of workers (default 5, configurable)
- - Uses sync.WaitGroup for coordination
- - Context propagation for cancellation
- - Per-evaluation timing
-
- Pattern:
- processor := batch.NewProcessor(executor, workers, logger)
- outputs := processor.Process(ctx, jobChannel) // Returns <-chan EvaluationOutput
-
- Worker implementation:
- - Converts EvaluationRequest → EvaluationContext
- - Calls executor.Execute(ctx, evalCtx)
- - Captures timing and errors
- - Sends to output channel
-
- 3. Progress Tracker (internal/batch/progress.go)
-
- Responsibility: Thread-safe progress tracking with periodic logging
-
- Key features:
- - Atomic counters (total, processed, succeeded, failed, skipped)
- - Ticker-based periodic logging (follows existing patterns)
- - Non-blocking updates
- - Final stats collection
-
- Pattern:
- tracker := batch.NewProgressTracker(total, interval, logger)
- tracker.RecordSuccess() // Atomic increment
- tracker.RecordFailure() // Atomic increment
- stats := tracker.GetStats() // Final summary
-
- 4. Output Writers (internal/batch/writer.go)
+ 2. Output Writers (internal/batch/writer.go)
 
  Responsibility: Format and write results
 
@@ -182,7 +135,23 @@ Batch Dataset Evaluation CLI Implementation Plan
  - Average confidence, average duration
  - Error list with line numbers
 
- 5. Main CLI (cmd/batch/main.go)
+ 3. Progress Tracker (internal/batch/progress.go)
+
+ Responsibility: Thread-safe progress tracking with periodic logging
+
+ Key features:
+ - Atomic counters (total, processed, succeeded, failed, skipped)
+ - Ticker-based periodic logging (follows existing patterns)
+ - Non-blocking updates
+ - Final stats collection
+
+ Pattern:
+ tracker := batch.NewProgressTracker(total, interval, logger)
+ tracker.RecordSuccess() // Atomic increment
+ tracker.RecordFailure() // Atomic increment
+ stats := tracker.GetStats() // Final summary
+
+ 4. Main CLI (cmd/batch/main.go)
 
  Workflow:
  1. Parse flags, validate required arguments
