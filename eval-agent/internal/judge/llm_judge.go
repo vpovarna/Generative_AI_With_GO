@@ -8,25 +8,25 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/rs/zerolog"
 )
 
 // LLMJudge is a generic judge implementation that uses LLM with configurable prompts.
 type LLMJudge struct {
-	name           string
-	promptTemplate *template.Template
-	modelConfig    config.ModelConfig
+	name            string
+	promptTemplate  *template.Template
+	modelConfig     config.ModelConfig
 	requiresContext bool
-	llmClient      LLMClient
-	logger         *zerolog.Logger
+	llmClient       llm.LLMClient
+	logger          *zerolog.Logger
 }
 
 func NewLLMJudge(
 	judgeCfg config.JudgeConfiguration,
-	llmClient LLMClient,
+	llmClient llm.LLMClient,
 	logger *zerolog.Logger,
 ) (*LLMJudge, error) {
 	tmpl, err := template.New(judgeCfg.Name).Parse(judgeCfg.Prompt)
@@ -80,15 +80,15 @@ func (j *LLMJudge) Evaluate(ctx context.Context, evalCtx models.EvaluationContex
 	}
 
 	// Call LLM
-	var resp *bedrock.ClaudeResponse
+	var resp *llm.LLMResponse
 	if j.modelConfig.Retry {
-		resp, err = j.llmClient.InvokeModelWithRetry(ctx, bedrock.ClaudeRequest{
+		resp, err = j.llmClient.InvokeModelWithRetry(ctx, llm.LLMRequest{
 			Prompt:      prompt,
 			MaxTokens:   j.modelConfig.MaxTokens,
 			Temperature: j.modelConfig.Temperature,
 		})
 	} else {
-		resp, err = j.llmClient.InvokeModel(ctx, bedrock.ClaudeRequest{
+		resp, err = j.llmClient.InvokeModel(ctx, llm.LLMRequest{
 			Prompt:      prompt,
 			MaxTokens:   j.modelConfig.MaxTokens,
 			Temperature: j.modelConfig.Temperature,

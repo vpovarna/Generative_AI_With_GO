@@ -11,18 +11,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 )
-
-type ClaudeRequest struct {
-	Prompt      string
-	MaxTokens   int
-	Temperature float64
-}
-
-type ClaudeResponse struct {
-	Content    string
-	StopReason string
-}
 
 type claudeMessageRequest struct {
 	AnthropicVersion string          `json:"anthropic_version"`
@@ -46,7 +36,7 @@ type claudeMessageResponse struct {
 
 var anthropicVersion = "bedrock-2023-05-31"
 
-func (c *Client) InvokeModel(ctx context.Context, request ClaudeRequest) (*ClaudeResponse, error) {
+func (c *Client) InvokeModel(ctx context.Context, request llm.LLMRequest) (*llm.LLMResponse, error) {
 	payload := claudeMessageRequest{
 		AnthropicVersion: anthropicVersion,
 		MaxTokens:        request.MaxTokens,
@@ -86,13 +76,13 @@ func (c *Client) InvokeModel(ctx context.Context, request ClaudeRequest) (*Claud
 		content = response.Content[0].Text
 	}
 
-	return &ClaudeResponse{
+	return &llm.LLMResponse{
 		Content:    content,
 		StopReason: response.StopReason,
 	}, nil
 }
 
-func (c *Client) InvokeModelWithRetry(ctx context.Context, request ClaudeRequest) (*ClaudeResponse, error) {
+func (c *Client) InvokeModelWithRetry(ctx context.Context, request llm.LLMRequest) (*llm.LLMResponse, error) {
 	var lastErr error
 
 	for attempt := 0; attempt < c.MaxRetries; attempt++ {

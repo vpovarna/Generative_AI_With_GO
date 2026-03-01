@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/povarna/generative-ai-agents/eval-agent/internal/bedrock"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/models"
 	"github.com/rs/zerolog"
 )
@@ -91,7 +91,7 @@ func TestLLMJudge_Evaluate_Success(t *testing.T) {
 	}
 
 	mockClient := &MockLLMClient{
-		ResponseToReturn: &bedrock.ClaudeResponse{
+		ResponseToReturn: &llm.LLMResponse{
 			Content: `{"score": 0.85, "reason": "Good match"}`,
 		},
 	}
@@ -222,7 +222,7 @@ func TestLLMJudge_Evaluate_WithRetry(t *testing.T) {
 	}
 
 	mockClient := &MockLLMClient{
-		ResponseToReturn: &bedrock.ClaudeResponse{
+		ResponseToReturn: &llm.LLMResponse{
 			Content: `{"score": 0.9, "reason": "test"}`,
 		},
 	}
@@ -254,7 +254,7 @@ func TestLLMJudge_Evaluate_InvalidJSON(t *testing.T) {
 	}
 
 	mockClient := &MockLLMClient{
-		ResponseToReturn: &bedrock.ClaudeResponse{
+		ResponseToReturn: &llm.LLMResponse{
 			Content: `not valid json`,
 		},
 	}
@@ -287,7 +287,7 @@ func TestLLMJudge_Evaluate_EmptyScoreAndReason(t *testing.T) {
 	}
 
 	mockClient := &MockLLMClient{
-		ResponseToReturn: &bedrock.ClaudeResponse{
+		ResponseToReturn: &llm.LLMResponse{
 			Content: `{"score": 0.0, "reason": ""}`,
 		},
 	}
@@ -330,7 +330,7 @@ func TestLLMJudge_Evaluate_ScoreOutOfRange(t *testing.T) {
 			}
 
 			mockClient := &MockLLMClient{
-				ResponseToReturn: &bedrock.ClaudeResponse{
+				ResponseToReturn: &llm.LLMResponse{
 					Content: fmt.Sprintf(`{"score": %f, "reason": "test"}`, tt.score),
 				},
 			}
@@ -355,13 +355,13 @@ func TestLLMJudge_Evaluate_ScoreOutOfRange(t *testing.T) {
 
 // MockLLMClient for testing
 type MockLLMClient struct {
-	ResponseToReturn *bedrock.ClaudeResponse
+	ResponseToReturn *llm.LLMResponse
 	ErrorToReturn    error
 	WasCalled        bool
-	LastRequest      *bedrock.ClaudeRequest
+	LastRequest      *llm.LLMRequest
 }
 
-func (m *MockLLMClient) InvokeModel(ctx context.Context, request bedrock.ClaudeRequest) (*bedrock.ClaudeResponse, error) {
+func (m *MockLLMClient) InvokeModel(ctx context.Context, request llm.LLMRequest) (*llm.LLMResponse, error) {
 	m.WasCalled = true
 	m.LastRequest = &request
 	if m.ErrorToReturn != nil {
@@ -370,7 +370,7 @@ func (m *MockLLMClient) InvokeModel(ctx context.Context, request bedrock.ClaudeR
 	return m.ResponseToReturn, nil
 }
 
-func (m *MockLLMClient) InvokeModelWithRetry(ctx context.Context, request bedrock.ClaudeRequest) (*bedrock.ClaudeResponse, error) {
+func (m *MockLLMClient) InvokeModelWithRetry(ctx context.Context, request llm.LLMRequest) (*llm.LLMResponse, error) {
 	m.WasCalled = true
 	m.LastRequest = &request
 	if m.ErrorToReturn != nil {

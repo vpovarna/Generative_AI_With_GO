@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/povarna/generative-ai-agents/eval-agent/internal/config"
+	"github.com/povarna/generative-ai-agents/eval-agent/internal/llm"
 	"github.com/rs/zerolog"
 )
 
@@ -14,7 +15,7 @@ type JudgeFactory struct {
 }
 
 // NewJudgeFactory creates a factory with judges loaded from configuration.
-func NewJudgeFactory(llmClient LLMClient, logger *zerolog.Logger) *JudgeFactory {
+func NewJudgeFactory(llmClient llm.LLMClient, logger *zerolog.Logger) *JudgeFactory {
 	// Load judges config
 	judgesConfig, err := config.LoadJudgesConfig()
 	if err != nil {
